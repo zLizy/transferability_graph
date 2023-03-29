@@ -3,14 +3,14 @@
 ## Data Preperation
 
 Create a folder name 'datasets'
-```
+```shell
 mkdir datasets
 ```
 You may implement the dataset loading method in: 
 `dataset_embed/task2vec_embed/dataset.py`
 For example, you may define a new dataset function as in the follwoing.
 
-```
+```python
 @_add_dataset
 def mnist(root):
     from torchvision.datasets import MNIST
@@ -23,7 +23,7 @@ def mnist(root):
     trainset = MNIST(root, train=True, transform=transform, download=True)
     testset = MNIST(root, train=False, transform=transform)
     return trainset, testset
-```
+```o
 
 ### Data Sources
 [torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)

@@ -6,7 +6,8 @@ Create a folder name 'datasets'
 ```
 mkdir datasets
 ```
-You may implement the dataset loading method in 
+You may implement the dataset loading method in: 
+`dataset_embed/task2vec_embed/dataset.p`
 
 ## Dataset Embeddings
 To get dataset embeddings, two ways are implemented:

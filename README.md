@@ -26,8 +26,9 @@ def mnist(root):
 ```
 
 ### Data Sources
-[torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)
-[huggingface](https://huggingface.co/datasets?task_categories=task_categories:image-classification&sort=downloads)
+- [torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)
+
+- [huggingface](https://huggingface.co/datasets?task_categories=task_categories:image-classification&sort=downloads)
 
 ## Dataset Embeddings
 To get dataset embeddings, two ways are implemented:

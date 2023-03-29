@@ -2,6 +2,11 @@
 
 ## Data Preperation
 
+Create a folder name 'datasets'
+```
+mkdir datasets
+```
+
 ## Dataset Embeddings
 
 ## Model Embeddings

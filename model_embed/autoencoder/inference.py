@@ -10,7 +10,7 @@ from tqdm import tqdm
 import random
 import os 
 import sys
-sys.path.append('../')
+sys.path.append('../../dataset_embed')
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -36,7 +36,7 @@ def run(model_name,dataloader,output_shape=2048):
     # feature_extractor = get_extractor(extractor,model_name)
     # model = get_classifier(classifier,model_name).cuda()
     try:
-        model = AutoModel.from_pretrained(model_name).cuda()
+        model = ViTForImageClassification.from_pretrained(model_name).cuda()
     except Exception as e:
         print('================')
         print(e)
@@ -58,7 +58,7 @@ def run(model_name,dataloader,output_shape=2048):
     labels = torch.zeros(1).to('cuda')
     with torch.no_grad():
         for x, y in tqdm(dataloader):
-            # print(x)
+            print(f'!!!!!!! x.shape: {x.shape}')
             # inputs = feature_extractor(images=x, return_tensors="pt")
             if input_shape != 224:
                 x = transforms.Resize(input_shape)(x)
@@ -218,10 +218,10 @@ def check_config(model_name,columns):
 
 
 def main():
-    CHECK_CONFIG = True
-    CHECK_INFERENCE = False
-    file = '../doc/ftrecords_img.csv'
-    miss_file = '../doc/missing_models.csv'
+    CHECK_CONFIG = False
+    CHECK_INFERENCE = True
+    file = '../../doc/ftrecords_img.csv'
+    miss_file = '../../doc/missing_models.csv'
     miss_models = list(pd.read_csv(miss_file)['model'])
     ds = ''
     ds_name = ''
@@ -229,14 +229,14 @@ def main():
 
     if CHECK_CONFIG:
         columns=['model','input_shape','output_shape','architectures','task','dataset','#labels','labels','task_specific_params','problem_type']
-        if not os.path.exists('../doc/model_config.csv'):
+        if not os.path.exists('../../doc/model_config.csv'):
             df_config = pd.DataFrame(columns=columns)
         else:
-            df_config = pd.read_csv('../doc/model_config.csv')
+            df_config = pd.read_csv('../../doc/model_config.csv')
     # About 291 models
     model_list = np.unique(df['model_identifier'])
     # for i, row in df.loc[10:15].iterrows():
-    for i, model_name in enumerate(model_list[200:250]):
+    for i, model_name in enumerate(model_list[:1]):
         print('==============')
         print(i,model_name)
         if model_name in miss_models: 

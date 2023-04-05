@@ -73,6 +73,29 @@ def main():
     grads = np.transpose(grads.squeeze().cpu().detach().numpy(), (1, 2, 0))
     print(grads.shape)
 
+    for im_i in range(imlist_size):
+        attributions = {
+                explain_method: de.explain(explain_method, endpoints['encoder_output'], m.input_images, imgs[im_i]) for
+                explain_method in explain_methods}
+        elrp[im_i] = attributions['elrp']
+        saliency[im_i] = attributions['saliency']
+        gradXinput[im_i] = attributions['grad*input']
+        if ((im_i+1) % 500) == 0:
+            print('{} images done.'.format(im_i))
+
+        np.save(os.path.join(explain_result_root, task, 'elrp.npy'), elrp)
+        np.save(os.path.join(explain_result_root, task, 'saliency.npy'), saliency)
+        np.save(os.path.join(explain_result_root, task, 'gradXinput.npy'), gradXinput)
+        ############## Clean Up ##############
+        training_runners['coord'].request_stop()
+        training_runners['coord'].join()
+        ############## Reset graph and paths ##############
+        tf.reset_default_graph()
+        training_runners['sess'].close()
+        print('Task {} Done!'.format(task))
+    print('All Done.')
+    return
+
     # _ = viz.visualize_image_attr_multiple(grads,
     #                                     np.transpose(transformed_img.squeeze().cpu().detach().numpy(), (1,2,0)),
     #                                     ["original_image", "heat_map"],

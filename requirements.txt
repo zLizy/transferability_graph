@@ -1,0 +1,25 @@
+pandas
+numpy
+transformers
+datasets
+seqeval
+evaluate
+scipy
+tqdm
+numba
+eland
+sentence_transformers
+pynvml
+accelerate
+# bitsandbytes
+# parallelformers
+# pytorch-lightning
+# GPUtil
+# apt-get update
+# RUN apt-get install git
+# python3 -m pip install git+https://github.com/huggingface/transformers.git
+# python3 -m pip install pip --upgrade
+# python3 -m pip install evaluate pynvml bitsandbytes --upgrade
+# install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+# install --upgrade pip
+# pip install torch==1.7.1

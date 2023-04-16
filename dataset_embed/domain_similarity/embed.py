@@ -9,7 +9,8 @@ import random
 import os
 import sys
 sys.path.append('../')
-from task2vec_embed import dataset
+sys.path.append('../..')
+from util import dataset
 
 MAX_NUM_SAMPLES = 5000
 FEATURE_DIM = 2048

@@ -1,6 +1,8 @@
 from task2vec import Task2Vec
 from models import get_model
-import dataset
+import sys
+sys.path.append('../../')
+from util import dataset
 import task_similarity
 import pickle
 

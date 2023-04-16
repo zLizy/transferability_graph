@@ -10,6 +10,10 @@ import torchvision.transforms.functional as TF
 from torchvision import models
 from transformers import AutoModel
 
+import sys
+sys.path.append('../../')
+from util import dataset
+
 from captum.attr import IntegratedGradients
 from saliency import Saliency
 from captum.attr import DeepLift
@@ -21,7 +25,6 @@ from captum.attr import visualization as viz
 
 
 def get_model(model_idx):
-
     file = '../../doc/ftrecords_img.csv'
     ds = ''
     ds_name = ''

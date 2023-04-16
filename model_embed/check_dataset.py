@@ -32,40 +32,54 @@ file = '../doc/model_config.csv'
 df = pd.read_csv(file)
 df_new = df.copy()
 
+hg_file = '../doc/hgpics_keyword.csv'
+df_hgpics = pd.read_csv(hg_file)
+keywords = df_hgpics['keywords'].values
+
 for i,row in df.iterrows():
-    print('-----------')
-    print(f"i, model_name: {i}, {row['model']}")
-    labels = row['labels']
-    print(f'labels: {labels}')
-    if labels in label2dataset.keys():
-        dataset = label2dataset[labels]
-        print(f'found {dataset}')
-        df_new.loc[i,'dataset'] = dataset
-        # df.to_csv(file,index=False)
+   print('-----------')
+   print(f"i, model_name: {i}, {row['model']}")
+   labels = row['labels']
+   print(f'labels: {labels}')
+   if labels in label2dataset.keys():
+      dataset = label2dataset[labels]
+      print(f'found {dataset}')
+      df_new.loc[i,'dataset'] = dataset
+      # df.to_csv(file,index=False)
+   elif labels in keywords:
+      print(f'found {labels} -- huggingface pics')
+      df_new.loc[i,'dataset'] = 'hgpics'
     
-    # configs = get_dataset_config_names(dataset_name)
-    # print(f'configs: {configs}')
-    # if dataset_name == 'cats_vs_dogs': continue
-    # try:
-    #     ds = load_dataset(dataset_name, split="test")
-    # except:
-    #     ds = load_dataset(dataset_name, 'full')
-    # try:
-    #     copy_of_features = ds.features.copy()
-    # except:
-    #     print(ds.keys())
-    #     copy_of_features = ds['test'].features.copy()
-    # # print(f'features: {copy_of_features}')
-    # print(f'feature_key: {copy_of_features.keys()}')
-    # key = [k for k in copy_of_features.keys() if 'label' in k]
-    # labels = copy_of_features[key[0]].names
-    # print(f'labels:{labels}')
+   # configs = get_dataset_config_names(dataset_name)
+   # print(f'configs: {configs}')
+   # if dataset_name == 'cats_vs_dogs': continue
+   # try:
+   #     ds = load_dataset(dataset_name, split="test")
+   # except:
+   #     ds = load_dataset(dataset_name, 'full')
+   # try:
+   #     copy_of_features = ds.features.copy()
+   # except:
+   #     print(ds.keys())
+   #     copy_of_features = ds['test'].features.copy()
+   # # print(f'features: {copy_of_features}')
+   # print(f'feature_key: {copy_of_features.keys()}')
+   # key = [k for k in copy_of_features.keys() if 'label' in k]
+   # labels = copy_of_features[key[0]].names
+   # print(f'labels:{labels}')
 print(df_new.head())
 df_new.to_csv(file,index=False)
+remove_model = [
+                'davanstrien/convnext_manuscript_iiif,davanstrien/davanstrien/flyswot_iiif',
+                'amitkayal/ak-vit-base-patch16-224-in21k-image_classification','davanstrien/flyswot_iiif'
+               ]
+df_new = df_new[~df_new['model'].isin(remove_model)]
+
 
 df_dataset = df_new[df_new['dataset'].notna()]
 df_null_dataset = df_new[df_new['dataset'].isna()]
 print(f'df_dataset: {len(df_dataset)},df_null_dataset: {len(df_null_dataset)}')
 df_null_dataset.to_csv('../doc/model_config_null_dataset.csv',index=False)
+df_dataset.to_csv('../doc/model_config_dataset.csv',index=False)
 
 

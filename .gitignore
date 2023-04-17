@@ -1,5 +1,6 @@
 data/
 datasets/
+doc/
 env_graph/
 ml-latest-small/
 model_embed/feature/*

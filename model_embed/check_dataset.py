@@ -48,7 +48,7 @@ for i,row in df.iterrows():
       # df.to_csv(file,index=False)
    elif labels in keywords:
       print(f'found {labels} -- huggingface pics')
-      df_new.loc[i,'dataset'] = 'hgpics'
+      df_new.loc[i,'dataset'] = 'hfpics'
     
    # configs = get_dataset_config_names(dataset_name)
    # print(f'configs: {configs}')

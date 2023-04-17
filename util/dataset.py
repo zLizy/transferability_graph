@@ -17,6 +17,7 @@ import torchvision.transforms as transforms
 import os
 import json
 from tfds import VTABIterableDataset
+from datasets import load_dataset
 
 
 try:

@@ -24,8 +24,9 @@ model = ResNetModel.from_pretrained("microsoft/resnet-50").to('cuda')
 datasets_list = [
                     'food101','cifar10','cifar100','caltech101',
                     'cars','eurosat','clevr_count_all','clevr_closest_object_distance',
-                    'dmlab', 'kitti_closest_vehicle_distance',
-                    'flowers','pets','pcam','sun397'
+                    'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',
+                    'pcam','sun397',
+                    'cats_vs_dogs'
                 ]
 
 for dataset_name in datasets_list:

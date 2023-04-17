@@ -7,7 +7,7 @@ Create a folder name 'datasets'
 mkdir datasets
 ```
 You may implement the dataset loading method in: 
-`dataset_embed/task2vec_embed/dataset.py`
+`util/dataset.py`
 For example, you may define a new dataset function as in the follwoing.
 
 ```python

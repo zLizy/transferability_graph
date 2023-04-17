@@ -21,7 +21,13 @@ model_name = 'resnet50'
 model = ResNetModel.from_pretrained("microsoft/resnet-50").to('cuda')
 
 ## Load datasets
-datasets_list = ['food101','cifar10','cifar100']
+datasets_list = [
+                    'food101','cifar10','cifar100','caltech101',
+                    'cars','eurosat','clevr_count_all','clevr_closest_object_distance',
+                    'dmlab',
+                    'flowers','pets','pcam','sun397'
+                ]
+
 for dataset_name in datasets_list:
     ds = dataset.__dict__[dataset_name]('../../datasets/')[0]
     idx = random.sample(range(len(ds)), k=MAX_NUM_SAMPLES)

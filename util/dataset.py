@@ -16,6 +16,7 @@ import collections
 import torchvision.transforms as transforms
 import os
 import json
+from tfds import VTABIterableDataset
 
 
 try:
@@ -64,6 +65,29 @@ def _get_transforms(augment=True, normalize=None):
 
     return transform_train, transform_test
 
+def _load_classnames(dataset_name, current_folder=os.path.dirname(__file__)):
+    with open(os.path.join(current_folder, "en_classnames.json"), "r") as f:
+        classnames = json.load(f)
+    return classnames
+
+def _get_torch_ds(tfds_dataset,transform,classes):
+    train_ds =  VTABIterableDataset(
+        tfds_dataset, 
+        input_name="image", label_name="label", 
+        transform=transform, 
+        target_transform=int,
+        split='train',
+        classes=classes,
+    )
+    test_ds =  VTABIterableDataset(
+        tfds_dataset, 
+        input_name="image", label_name="label", 
+        transform=transform, 
+        target_transform=int,
+        split='test',
+        classes=classes,
+    )
+    return train_ds, test_ds
 
 def _get_mnist_transforms(augment=True, invert=False, transpose=False):
     transform = [
@@ -260,6 +284,125 @@ def cifar10_mnist(root, config):
         [CIFAR10Dataset(root, train=False), MNISTDataset(root, train=False, expand=True)], transform=transform_test)
     return trainset, testset
 
+@_add_dataset
+def cars(root):
+    from torchvision.datasets import StanfordCars
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True, **kwargs)
+    test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True, **kwargs)
+    return train_dataset, test_dataset
+
+@_add_dataset
+def dtd(root):
+    from task_adaptation.data.dtd import DTDData
+    tfds_dataset = DTDData(data_dir=root)
+    classes = _load_classnames("dtd")
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def eurosat(root):
+    from torchvision.datasets import EuroSAT
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    train_dataset = EuroSAT(root=root, split="train", transform=transform, download=True, **kwargs)
+    test_dataset = EuroSAT(root=root, split="test", transform=transform, download=True, **kwargs)
+    train_dataset.classes = _load_classnames("eurosat")
+    test_dataset.classes = _load_classnames("eurosat")
+    return train_dataset, test_dataset
+
+@_add_dataset
+def flowers(root):
+    from task_adaptation.data.oxford_flowers102 import OxfordFlowers102Data
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    tfds_dataset = OxfordFlowers102Data(data_dir=root)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('flowers'))
+
+@_add_dataset
+def pets(root):
+    from task_adaptation.data.oxford_iiit_pet import OxfordIIITPetData
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    tfds_dataset = OxfordIIITPetData(data_dir=root)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('pets'))
+
+
+@_add_dataset
+def dmlab(root):
+    from task_adaptation.data.dmlab import DmlabData
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    download_tfds_dataset("dmlab", data_dir=root) # it's not called in the original VTAB code, so we do it explictly
+    tfds_dataset = DmlabData(data_dir=root)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('dmlab'))
+
+@_add_dataset
+def clevr(root,task):
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    from task_adaptation.data.clevr import CLEVRData
+    # task = _extract_task(dataset_name)
+    assert task in ("count_all", "closest_object_distance")
+    tfds_dataset = CLEVRData(task=task, data_dir=root)
+    if task == "count_all":
+        classes = _load_classnames("clevr_count_all")
+    elif task == "closest_object_distance":
+        classes = _load_classnames("clevr_closest_object_distance")
+    else:
+        raise ValueError(f"non supported: {task}")
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def caltech101(root):
+    from torchvision.datasets import Caltech101
+    transform = transforms.Compose(
+            [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+                # transforms.Normalize(mean, std),
+            ]
+        )
+    train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True, **kwargs)
+    test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True, **kwargs)
+    return train_dataset, test_dataset
 
 @_add_dataset
 def imagenet(root):
@@ -304,6 +447,38 @@ def cifar100(root):
     trainset = CIFAR100(root, train=True, transform=transform, download=True)
     testset = CIFAR100(root, train=False, transform=transform)
     return trainset, testset
+
+@_add_dataset
+def pcam(root):
+    from torchvision.datasets import PCAM
+    transform = transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ])
+    trainset =  PCAM(root=root, split="train", transform=transform, download=True, **kwargs)
+    testset =  PCAM(root=root, split="test", transform=transform, download=True, **kwargs)
+    classes = _load_classnames("pcam")
+    trainset.classes = classes
+    testset.classes = classes
+    return trainset, testset
+
+
+@_add_dataset
+def sun397(root):
+    from torchvision.datasets import SUN397
+    transform = transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ])
+    trainset = SUN397(root, train=True, transform=transform, download=True)
+    testset = SUN397(root, train=False, transform=transform)
+    # ds = SUN397(root=root, transform=transform, download=True, **kwargs)
+    # trainset.classes = [cl.replace("_", " ").replace("/", " ") for cl in ds.classes]
+    return trainset, testset
+
+
 
 
 @_add_dataset

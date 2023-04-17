@@ -11,6 +11,7 @@ eland
 sentence_transformers
 pynvml
 accelerate
+task_adaptation==0.1
 # bitsandbytes
 # parallelformers
 # pytorch-lightning

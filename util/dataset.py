@@ -65,6 +65,11 @@ def _get_transforms(augment=True, normalize=None):
 
     return transform_train, transform_test
 
+def _extract_task(dataset_name):
+    prefix, *task_name_list = dataset_name.split("_")
+    task = "_".join(task_name_list)
+    return task
+
 def _load_classnames(dataset_name, current_folder=os.path.dirname(__file__)):
     with open(os.path.join(current_folder, "en_classnames.json"), "r") as f:
         classnames = json.load(f)
@@ -287,13 +292,7 @@ def cifar10_mnist(root, config):
 @_add_dataset
 def cars(root):
     from torchvision.datasets import StanfordCars
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True, **kwargs)
     test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True, **kwargs)
     return train_dataset, test_dataset
@@ -303,25 +302,13 @@ def dtd(root):
     from task_adaptation.data.dtd import DTDData
     tfds_dataset = DTDData(data_dir=root)
     classes = _load_classnames("dtd")
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def eurosat(root):
     from torchvision.datasets import EuroSAT
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     train_dataset = EuroSAT(root=root, split="train", transform=transform, download=True, **kwargs)
     test_dataset = EuroSAT(root=root, split="test", transform=transform, download=True, **kwargs)
     train_dataset.classes = _load_classnames("eurosat")
@@ -331,26 +318,14 @@ def eurosat(root):
 @_add_dataset
 def flowers(root):
     from task_adaptation.data.oxford_flowers102 import OxfordFlowers102Data
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     tfds_dataset = OxfordFlowers102Data(data_dir=root)
     return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('flowers'))
 
 @_add_dataset
 def pets(root):
     from task_adaptation.data.oxford_iiit_pet import OxfordIIITPetData
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     tfds_dataset = OxfordIIITPetData(data_dir=root)
     return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('pets'))
 
@@ -358,26 +333,23 @@ def pets(root):
 @_add_dataset
 def dmlab(root):
     from task_adaptation.data.dmlab import DmlabData
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     download_tfds_dataset("dmlab", data_dir=root) # it's not called in the original VTAB code, so we do it explictly
     tfds_dataset = DmlabData(data_dir=root)
     return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('dmlab'))
 
 @_add_dataset
+def clevr_count_all(root):
+    task = _extract_task('clevr_count_all')
+    return clevr(root,task)
+
+    @_add_dataset
+def clevr_closest_object_distance(root):
+    task = _extract_task('clevr_closest_object_distance')
+    return clevr(root,task)
+
 def clevr(root,task):
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     from task_adaptation.data.clevr import CLEVRData
     # task = _extract_task(dataset_name)
     assert task in ("count_all", "closest_object_distance")
@@ -391,15 +363,63 @@ def clevr(root,task):
     return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
+def svhn(root):
+    from task_adaptation.data.svhn import SvhnData
+    tfds_dataset = SvhnData(data_dir=data_dir)
+    classes = classnames["svhn"]
+    transform, _ = _get_transforms(augment=False)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def smallnorb_label_azimuth(root):
+    task = _extract_task('smallnorb_label_azimuth')
+    return smallnorb(root,task)
+
+def smallnorb(root,task,transform=None):
+    from task_adaptation.data.smallnorb import SmallNORBData
+    assert task in ("label_category", "label_elevation", "label_azimuth", "label_lighting")
+    tfds_dataset = SmallNORBData(predicted_attribute=task, data_dir=data_dir)
+    classes = tfds_dataset._dataset_builder.info.features[task].names
+    transform, _ = _get_transforms(augment=False)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def dsprites_label_orientation(root):
+    task = _extract_task('dsprites_label_orientation')
+    return dsprites(root,task)
+
+def dsprites(root,task,transform=None):
+    from task_adaptation.data.dsprites import DSpritesData
+    assert task in ("label_shape", "label_scale", "label_orientation", "label_x_position", "label_y_position")
+    tfds_dataset = DSpritesData(task, data_dir=data_dir)
+    classes = tfds_dataset._dataset_builder.info.features[task].names
+    transform, _ = _get_transforms(augment=False)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def kitti_closest_vehicle_distance(root):
+    task = _extract_task('kitti_closest_vehicle_distance')
+    return kitti(root,task)
+
+def kitti(root,task):
+    from dataset.kitti import KittiData
+    assert task in (
+            "count_all", "count_left", "count_far", "count_near", 
+            "closest_object_distance", "closest_object_x_location", 
+            "count_vehicles", "closest_vehicle_distance",
+        )
+    tfds_dataset = KittiData(task=task, data_dir=data_dir)
+    if task == "closest_vehicle_distance":
+        classes = classnames["kitti_closest_vehicle_distance"]
+    else:
+        raise ValueError(f"Unsupported task: {task}")
+    transform, _ = _get_transforms(augment=False)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    
+@_add_dataset
 def caltech101(root):
     from torchvision.datasets import Caltech101
-    transform = transforms.Compose(
-            [
-                transforms.Resize(224),
-                transforms.ToTensor(),
-                # transforms.Normalize(mean, std),
-            ]
-        )
+    transform, _ = _get_transforms(augment=False)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True, **kwargs)
     test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True, **kwargs)
     return train_dataset, test_dataset
@@ -407,16 +427,9 @@ def caltech101(root):
 @_add_dataset
 def imagenet(root):
     from dataset.imagenet import ImageNetKaggle
-    mean = (0.485, 0.456, 0.406)
-    std = (0.229, 0.224, 0.225)
-    val_transform = transforms.Compose(
-            [
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std),
-            ]
-        )
+    # mean = (0.485, 0.456, 0.406)
+    # std = (0.229, 0.224, 0.225)
+    transform, _ = _get_transforms(augment=False,normalize=True)
     dataset = ImageNetKaggle(root, "val", val_transform)
     # trainset = CIFAR10(root, train=True, transform=transform, download=True)
     # testset = CIFAR10(root, train=False, transform=transform)
@@ -511,11 +524,7 @@ def letters(root):
 @_add_dataset
 def food101(root):
     from torchvision.datasets import Food101
-    transform = transforms.Compose([transforms.Resize(255),
-                                      transforms.CenterCrop(224),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize([0.485, 0.456, 0.406],
-                                                           [0.229, 0.224, 0.225])])
+    transform, _ = _get_transforms(augment=False,normalize=True)
     trainset = Food101(root, split='train', transform=transform, download=True)
     testset = Food101(root, split='test', transform=transform)
     trainset.targets = trainset._labels
@@ -552,5 +561,4 @@ def stl10(root):
 
 def get_dataset(root, config=None):
     return _DATASETS[config.name](os.path.expanduser(root), config)
-
 

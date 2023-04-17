@@ -31,7 +31,7 @@ dataset_collection = {
         "voc2007",
         "voc2007_multilabel",
         "sun397",
-        "cars",
+        "stanfordcars",
         "fgvc_aircraft",
         "mnist",
         "stl10",

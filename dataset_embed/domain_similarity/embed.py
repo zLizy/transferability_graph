@@ -1,4 +1,4 @@
-from transformers import AutoImageProcessor, ResNetModel
+from transformers import AutoImageProcessor, ResNetModel,ConvNextModel
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch
@@ -14,22 +14,28 @@ from util import dataset
 
 MAX_NUM_SAMPLES = 5000
 FEATURE_DIM = 2048
+GET_FEATURE = True
 
 ### Check output dimension -> it should be 2048
 model_name = 'resnet50'
 # model = torchvision.models.resnet50(weights="DEFAULT")
-model = ResNetModel.from_pretrained("microsoft/resnet-50").to('cuda')
+# model = ResNetModel.from_pretrained("microsoft/resnet-50").to('cuda')
+model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
+
 
 ## Load datasets
 datasets_list = [
                     'food101','cifar10','cifar100','caltech101',
-                    'cars','eurosat','clevr_count_all','clevr_closest_object_distance',
+                    'stanfordcars','eurosat','clevr_count_all','clevr_closest_object_distance',
                     'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',
-                    'pcam','sun397',
-                    'cats_vs_dogs'
+                    'pcam','sun397','smallnorb_label_azimuth','smallnorb_label_elevation',
+                    'svhn','resisc45','diabetic_retinopathy',
+                    'cats_vs_dogs','keremberke/pokemon-classification','beans','poolrf2001/mask',
+                    'Matthijs/snacks','keremberke/chest-xray-classification'
                 ]
 
 for dataset_name in datasets_list:
+    dataset_name = dataset_name.replace('/','_').replace('-','_')
     ds = dataset.__dict__[dataset_name]('../../datasets/')[0]
     idx = random.sample(range(len(ds)), k=MAX_NUM_SAMPLES)
     ds = torch.utils.data.Subset(ds, idx)
@@ -49,18 +55,29 @@ for dataset_name in datasets_list:
     with torch.no_grad():
         for x, y in tqdm(dataloader):
             # print(f'len of a batch: {len(y)}')
-            output = model(x.cuda())
-            feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))
-            features = torch.cat((features,feature),0)
+            if GET_FEATURE:
+                output = model(x.cuda())
+                feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))
+                features = torch.cat((features,feature),0)
             labels = torch.cat((labels,y.cuda()),0)
     if not os.path.exists(os.path.join('./feature', model_name)):
         os.makedirs(os.path.join('./feature', model_name))
+    
     features = features.cpu().detach().numpy()
     features = features[1:]
     labels = labels.cpu().detach().numpy()
     labels = labels[1:]
     unique,counts = np.unique(labels,return_counts=True)
     save_dir = os.path.join('./feature', model_name,dataset_name)
-    np.save(os.path.join(save_dir + f'_feature_{MAX_NUM_SAMPLES}.npy'), features)
+    if GET_FEATURE:
+        np.save(os.path.join(save_dir + f'_feature_{MAX_NUM_SAMPLES}.npy'), features)
+        sorted_label = sorted(list(set(labels)))
+        feature_per_class = np.zeros((len(sorted_label), FEATURE_DIM), dtype=np.float32)
+        counter = 0
+        for i in sorted_label:
+            idx = [(l==i) for l in label]
+            feature_per_class[counter, :] = np.mean(feature[idx, :], axis=0)
+            counter += 1
+        np.save(feature_dir + dataset + '.npy', feature_per_class)    
     np.save(os.path.join(save_dir + f'_label_{MAX_NUM_SAMPLES}.npy'), labels)
-    np.save(os.path.join(save_dir + f'_weight_{MAX_NUM_SAMPLES}.npy'), counts)
+    # np.save(os.path.join(save_dir + f'_weight_{MAX_NUM_SAMPLES}.npy'), counts)

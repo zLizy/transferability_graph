@@ -26,11 +26,35 @@ def beans(root):
     return train_dataset, test_dataset
 
 @_add_dataset
+def keremberke_pokemon_classification(root):
+    train_dataset = load_dataset('keremberke/pokemon-classification', split='train')
+    train_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
+    test_dataset = load_dataset('keremberke/pokemon-classification', split='validation')
+    test_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
+    return train_dataset, test_dataset
+
+@_add_dataset
 def poolrf2001_mask(root):
     train_dataset = load_dataset("poolrf2001/mask", split='train')
     train_dataset.set_format(type='torch', columns=['image', 'labels'])
     test_dataset = load_dataset("poolrf2001/mask", split='validation')
     test_dataset.set_format(type='torch', columns=['image', 'labels'])
+    return train_dataset, test_dataset
+
+@_add_dataset
+def Matthijs_snacks(root):
+    train_dataset = load_dataset("Matthijs/snacks", split='train')
+    train_dataset.set_format(type='torch', columns=['image', 'label'])
+    test_dataset = load_dataset("poolrf2001/mask", split='validation')
+    test_dataset.set_format(type='torch', columns=['image', 'label'])
+    return train_dataset, test_dataset
+
+@_add_dataset
+def FastJobs_Visual_Emotional_Analysis(root):
+    train_dataset = load_dataset("FastJobs/Visual_Emotional_Analysis", split='train')
+    train_dataset.set_format(type='torch', columns=['image', 'label'])
+    test_dataset = load_dataset("FastJobs/Visual_Emotional_Analysis", split='validation')
+    test_dataset.set_format(type='torch', columns=['image', 'label'])
     return train_dataset, test_dataset
 
 @_add_dataset

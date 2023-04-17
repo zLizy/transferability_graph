@@ -304,7 +304,7 @@ def cifar10_mnist(root, config):
     return trainset, testset
 
 @_add_dataset
-def cars(root):
+def stanfordcars(root):
     from torchvision.datasets import StanfordCars
     transform, _ = _get_transforms(augment=False)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True, **kwargs)
@@ -357,7 +357,7 @@ def clevr_count_all(root):
     task = _extract_task('clevr_count_all')
     return clevr(root,task)
 
-    @_add_dataset
+@_add_dataset
 def clevr_closest_object_distance(root):
     task = _extract_task('clevr_closest_object_distance')
     return clevr(root,task)
@@ -571,6 +571,28 @@ def stl10(root):
     trainset.targets = trainset.labels
     testset.targets = testset.labels
     return trainset, testset
+
+@_add_dataset
+def diabetic_retinopathy(root):
+    # Needs manual download from Kaggle
+    # 1) `kaggle competitions download -c diabetic-retinopathy-detection` on $ROOT/downloads/manual
+    # 2) extract archives  on $ROOT/downloads/manual
+    if not os.path.exists(root):
+        # Automatic download
+        print("Downloading diabetic_retinopathy...")
+        if not has_kaggle():
+            print("Kaggle is needed to download the dataset. Please install it via `pip install kaggle`")
+            sys.exit(1)
+        os.makedirs(os.path.join(data_dir, "downloads", "manual"))
+        call(f"kaggle competitions download -c diabetic-retinopathy-detection -p {data_dir}/downloads/manual", shell=True)
+        call(f"cd {root}/downloads/manual;unzip diabetic-retinopathy-detection.zip;cat train.zip*>train.zip;cat test.zip*>test.zip;unzip train.zip; unzip test.zip;unzip sample.zip;unzip trainLabels.csv.zip", shell=True)
+        
+    from task_adaptation.data.diabetic_retinopathy import RetinopathyData
+    tfds_dataset = RetinopathyData(config="btgraham-300", data_dir=root)
+    classes = classnames["diabetic_retinopathy"]
+
+    transform, _ = _get_transforms(augment=False)
+    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 
 def get_dataset(root, config=None):

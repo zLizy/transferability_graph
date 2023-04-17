@@ -14,7 +14,7 @@ def disable_gpus_on_tensorflow():
 
 class VTABIterableDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, tfds_dataset, split="test", input_name="image", label_name="label", input_mode="RGB", transform=None, target_transform=None, classes=None):
+    def __init__(self, tfds_dataset, split="test", input_name="image", label_name="label", input_mode="RGB", transform=None, target_transform=None, classes=None,batch_size=1):
         self.tfds_dataset = tfds_dataset
         self.input_name = input_name
         self.label_name = label_name
@@ -23,13 +23,15 @@ class VTABIterableDataset(torch.utils.data.IterableDataset):
         self.input_mode = input_mode
         self.num_examples = tfds_dataset.get_num_samples(split)
         self.split = split
+        self.batch_size = batch_size
         if classes is None:
             self.classes = tfds_dataset._dataset_builder.info.features['label'].names
         else:
             self.classes = classes
+
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
-        iterator = self.tfds_dataset.get_tf_data(self.split, batch_size=1, epochs=1, for_eval=True)
+        iterator = self.tfds_dataset.get_tf_data(self.split, batch_size=self.batch_size, epochs=1, for_eval=True)# self.batch_size = 1
         if worker_info is not None:
             iterator = iterator.shard(index=worker_info.id, num_shards=worker_info.num_workers)
         nb = 0
@@ -43,6 +45,8 @@ class VTABIterableDataset(torch.utils.data.IterableDataset):
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 yield input, label
+
+        # return iterator
                 
     def __len__(self):
         return self.num_examples

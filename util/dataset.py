@@ -17,7 +17,6 @@ import torchvision.transforms as transforms
 import os
 import json
 from tfds import VTABIterableDataset
-from datasets import load_dataset
 
 
 try:
@@ -36,7 +35,7 @@ def _add_dataset(dataset_fn):
     return dataset_fn
 
 
-def _get_transforms(augment=True, normalize=None):
+def _get_transforms(augment=False, normalize=None):
     if normalize is None:
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
@@ -154,6 +153,20 @@ def set_metadata(trainset, testset, config, dataset_name):
         'task_name': testset.task_name,
     }
     return trainset, testset
+
+@_add_dataset
+def face_age(root,IMAGE_PATH,TRAIN_CSV_PATH,TEST_CSV_PATH):
+    # https://www.aicrowd.com/showcase/solution-for-submission-175171
+    from dataset.age import DatasetAge
+    transforms, _ = _get_transforms(normalize=True)
+    train_dataset = DatasetAge(csv_path=TRAIN_CSV_PATH,
+                               img_dir=IMAGE_PATH,
+                               split="train",
+                               transform=transforms)
+    test_dataset = DatasetAge(csv_path=TEST_CSV_PATH,
+                               img_dir=IMAGE_PATH,
+                               split="test",
+                               transform=transforms)
 
 @_add_dataset
 def inat2018(root, config):

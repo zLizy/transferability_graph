@@ -14,9 +14,9 @@
 
 import collections
 import torchvision.transforms as transforms
-import tensorflow_datasets as tfds
 import os
 import json
+
 from util.tfds import VTABIterableDataset
 from torch.utils.data import DataLoader
 
@@ -495,7 +495,7 @@ def cifar10(root):
                     drop_last=False,
                     pin_memory=True
                 )
-    return dataloader, test_dataset
+    return dataloader, testset
 
 
 @_add_dataset
@@ -685,6 +685,11 @@ def diabetic_retinopathy(root):
     transform, _ = _get_transforms(augment=False)
     return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
+@_add_dataset
+def huggingfacepics_corgi(root):
+    from dataset.huggingfacepics import get_huggingfacepics_data_set_by_all_search_term
+
+    return get_huggingfacepics_data_set_by_all_search_term(["corgi"])
 
 def get_dataset(root, config=None):
     return _DATASETS[config.name](os.path.expanduser(root), config)

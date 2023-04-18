@@ -6,21 +6,24 @@ import torchvision
 from tqdm import tqdm
 import numpy as np
 import random
+random.seed(10)
+
 import os
 import sys
 sys.path.append('../')
 sys.path.append('../..')
 from util import dataset
-import util
+from util.tfds import VTABIterableDataset
 
 MAX_NUM_SAMPLES = 5000
 FEATURE_DIM = 2048
 GET_FEATURE = True
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ### Check output dimension -> it should be 2048
 model_name = 'resnet50'
 # model = torchvision.models.resnet50(weights="DEFAULT")
-model = ResNetModel.from_pretrained("microsoft/resnet-50").to('cuda')
+model = ResNetModel.from_pretrained("microsoft/resnet-50").to(device)
 # model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
 
 
@@ -35,7 +38,7 @@ datasets_list = [
                     'Matthijs/snacks','keremberke/chest-xray-classification'
                 ]
 
-for dataset_name in datasets_list[3:]:
+for dataset_name in datasets_list[:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
     ds = dataset.__dict__[dataset_name]('../../datasets/')[0]
@@ -55,9 +58,9 @@ for dataset_name in datasets_list[3:]:
     #                 pin_memory=True
     #             )
     # Feature extraction.
-    features = torch.zeros(1,FEATURE_DIM).to('cuda')
+    features = torch.zeros(1,FEATURE_DIM).to(device)
     print(f'features.shape: {features.shape}')
-    labels = torch.zeros(1).to('cuda')
+    labels = torch.zeros(1).to(device)
     print_flag = True
     if isinstance(ds,DataLoader):
         print('is DataLoader type')
@@ -67,13 +70,13 @@ for dataset_name in datasets_list[3:]:
         with torch.no_grad():
             for x, y in tqdm(dataloader):
                 if GET_FEATURE:
-                    output = model(x.cuda())
+                    output = model(x.to(device))
                     if print_flag:
                         print(f'output.pooler_output: {output.pooler_output.shape}')
                         print_flag = False
                     feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))
                     features = torch.cat((features,feature),0)
-                labels = torch.cat((labels,y.cuda()),0)
+                labels = torch.cat((labels,y.to(device)),0)
     else:
         for (x,y) in tqdm(ds):
                 # inputs = data[0]#(data['image'].numpy())
@@ -84,7 +87,7 @@ for dataset_name in datasets_list[3:]:
                 #   print(f'x.shape:{x.shape}')
                     if GET_FEATURE:
                         x = torch.reshape(x,(1,)+x.shape)
-                        output = model(x.cuda())
+                        output = model(x.to(device))
                         if print_flag:
                             print(f'output.pooler_output: {output.pooler_output.shape}')
                             print_flag = False

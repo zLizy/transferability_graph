@@ -5,6 +5,8 @@ sys.path.append('../../')
 from util import dataset
 import task_similarity
 import pickle
+import torch
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset_names = ('imagenet','cifar10', 'cifar100', 'food101')
 dataset_list = [dataset.__dict__[name]('../../datasets/')[0] for name in dataset_names] 
@@ -12,7 +14,7 @@ dataset_list = [dataset.__dict__[name]('../../datasets/')[0] for name in dataset
 embeddings = []
 for name, dataset in zip(dataset_names, dataset_list):
     print(f"Embedding {name}")
-    probe_network = get_model('resnet34', pretrained=True, num_classes=int(max(dataset.targets)+1)).cuda()
+    probe_network = get_model('resnet34', pretrained=True, num_classes=int(max(dataset.targets)+1)).to(device)
     emb = Task2Vec(probe_network, max_samples=1000, skip_layers=6).embed(dataset)
     print(emb)
     embeddings.append(emb)

@@ -1,6 +1,7 @@
 import torch
 from PIL import Image
 import torchvision.transforms as transforms
+import tensorflow_datasets as tfds
 
 
 def download_tfds_dataset(name, data_dir=None):

@@ -315,15 +315,7 @@ def stanfordcars(root):
     transform, _ = _get_transforms(augment=False)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True)
     test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True)
-    dataloader = DataLoader(
-                    train_dataset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return train_dataset, test_dataset
 
 @_add_dataset
 def dtd(root):
@@ -341,15 +333,7 @@ def eurosat(root):
     test_dataset = EuroSAT(root=root, split="test", transform=transform, download=True)
     train_dataset.classes = _load_classnames("eurosat")
     test_dataset.classes = _load_classnames("eurosat")
-    dataloader = DataLoader(
-                    train_dataset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return train_dataset, test_dataset
 
 @_add_dataset
 def flowers(root):
@@ -487,15 +471,7 @@ def cifar10(root):
     ])
     trainset = CIFAR10(root, train=True, transform=transform, download=True)
     testset = CIFAR10(root, train=False, transform=transform)
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, testset
+    return trainset, testset
 
 
 @_add_dataset
@@ -507,16 +483,7 @@ def cifar100(root):
         transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ])
     trainset = CIFAR100(root, train=True, transform=transform, download=True)
-    testset = CIFAR100(root, train=False, transform=transform)
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 @_add_dataset
 def pcam(root):
@@ -531,15 +498,7 @@ def pcam(root):
     classes = _load_classnames("pcam")
     trainset.classes = classes
     testset.classes = classes
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 
 @_add_dataset
@@ -554,16 +513,7 @@ def sun397(root):
     testset = SUN397(root, train=False, transform=transform)
     # ds = SUN397(root=root, transform=transform, download=True, **kwargs)
     # trainset.classes = [cl.replace("_", " ").replace("/", " ") for cl in ds.classes]
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
-
+    return trainset, testset
 
 
 
@@ -578,15 +528,7 @@ def mnist(root):
     ])
     trainset = MNIST(root, train=True, transform=transform, download=True)
     testset = MNIST(root, train=False, transform=transform)
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 
 @_add_dataset
@@ -610,15 +552,7 @@ def food101(root):
     testset = Food101(root, split='test', transform=transform)
     trainset.targets = trainset._labels
     testset.targets = testset._labels
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 @_add_dataset
 def kmnist(root):
@@ -630,15 +564,7 @@ def kmnist(root):
     ])
     trainset = KMNIST(root, train=True, transform=transform, download=True)
     testset = KMNIST(root, train=False, transform=transform)
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 
 @_add_dataset
@@ -653,15 +579,7 @@ def stl10(root):
     testset = STL10(root, split='test', transform=transform)
     trainset.targets = trainset.labels
     testset.targets = testset.labels
-    dataloader = DataLoader(
-                    trainset,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-    return dataloader, test_dataset
+    return trainset, testset
 
 @_add_dataset
 def diabetic_retinopathy(root):

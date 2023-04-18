@@ -1,5 +1,6 @@
 from transformers import AutoImageProcessor, ResNetModel,ConvNextModel
 from torch.utils.data import DataLoader
+from torch.utils import data
 from torchvision import transforms
 import torch
 import torchvision
@@ -38,7 +39,7 @@ datasets_list = [
                     'Matthijs/snacks','keremberke/chest-xray-classification'
                 ]
 
-for dataset_name in datasets_list[:]:
+for dataset_name in datasets_list[3:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
     ds = dataset.__dict__[dataset_name]('../../datasets/')[0]
@@ -62,10 +63,18 @@ for dataset_name in datasets_list[:]:
     print(f'features.shape: {features.shape}')
     labels = torch.zeros(1).to(device)
     print_flag = True
-    if isinstance(ds,DataLoader):
-        print('is DataLoader type')
+    if not isinstance(ds,VTABIterableDataset):
+        print('is tfds type')
         idx = random.sample(range(len(ds)), k=LEN)
-        dataloader = torch.utils.data.Subset(ds, idx)
+        ds = torch.utils.data.Subset(ds, idx)
+        dataloader = DataLoader(
+                    ds,
+                    batch_size=64, # may need to reduce this depending on your GPU 
+                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
+                    shuffle=False,
+                    drop_last=False,
+                    pin_memory=True
+                )
         print(f'dataloader size: {len(dataloader)}')
         with torch.no_grad():
             for x, y in tqdm(dataloader):

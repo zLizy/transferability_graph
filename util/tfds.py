@@ -1,5 +1,6 @@
 import torch
 from PIL import Image
+import torchvision.transforms as transforms
 
 
 def download_tfds_dataset(name, data_dir=None):
@@ -31,17 +32,26 @@ class VTABIterableDataset(torch.utils.data.IterableDataset):
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
+        print(f'worker_info: {worker_info}')
         iterator = self.tfds_dataset.get_tf_data(self.split, batch_size=self.batch_size, epochs=1, for_eval=True)# self.batch_size = 1
         if worker_info is not None:
             iterator = iterator.shard(index=worker_info.id, num_shards=worker_info.num_workers)
         nb = 0
+        self.transform = transforms.Compose([
+                            transforms.ToPILImage(),
+                            transforms.Resize((224,224)),
+                            transforms.ToTensor(),
+                        ])
         for data in iterator:
             inputs = (data[self.input_name].numpy())
+            # print(f'type inputs: {type(inputs)}, inputs shape: {inputs.shape}')
             labels = data[self.label_name].numpy()
             for input, label in zip(inputs, labels):
-                input = Image.fromarray(input, mode=self.input_mode)
+                # input = Image.fromarray(input, mode=self.input_mode)
                 if self.transform is not None:
+                    # print('transform is not None')
                     input = self.transform(input)
+                # print(f'type input: {type(input)}, inputs shape after transforms: {input.shape}')
                 if self.target_transform is not None:
                     label = self.target_transform(label)
                 yield input, label

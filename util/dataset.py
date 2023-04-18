@@ -307,7 +307,7 @@ def cifar10_mnist(root, config):
         [CIFAR10Dataset(root, train=True), MNISTDataset(root, train=True, expand=True)], transform=transform_train)
     testset = UnionClassificationTaskExpander(merge_duplicate_images=False)(
         [CIFAR10Dataset(root, train=False), MNISTDataset(root, train=False, expand=True)], transform=transform_test)
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 @_add_dataset
 def stanfordcars(root):
@@ -315,7 +315,7 @@ def stanfordcars(root):
     transform, _ = _get_transforms(augment=False)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True)
     test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True)
-    return train_dataset, test_dataset
+    return train_dataset, test_dataset, 'tvds'
 
 @_add_dataset
 def dtd(root):
@@ -323,7 +323,8 @@ def dtd(root):
     tfds_dataset = DTDData(data_dir=root)
     classes = _load_classnames("dtd")
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def eurosat(root):
@@ -333,21 +334,23 @@ def eurosat(root):
     test_dataset = EuroSAT(root=root, split="test", transform=transform, download=True)
     train_dataset.classes = _load_classnames("eurosat")
     test_dataset.classes = _load_classnames("eurosat")
-    return train_dataset, test_dataset
+    return train_dataset, test_dataset, 'tvds'
 
 @_add_dataset
 def flowers(root):
     from task_adaptation.data.oxford_flowers102 import OxfordFlowers102Data
     transform, _ = _get_transforms(augment=False)
     tfds_dataset = OxfordFlowers102Data(data_dir=root)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('flowers'))
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('flowers'))
 
 @_add_dataset
 def pets(root):
     from task_adaptation.data.oxford_iiit_pet import OxfordIIITPetData
     transform, _ = _get_transforms(augment=False)
     tfds_dataset = OxfordIIITPetData(data_dir=root)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('pets'))
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('pets'))
 
 
 @_add_dataset
@@ -356,7 +359,8 @@ def dmlab(root):
     transform, _ = _get_transforms(augment=False)
     download_tfds_dataset("dmlab", data_dir=root) # it's not called in the original VTAB code, so we do it explictly
     tfds_dataset = DmlabData(data_dir=root)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('dmlab'))
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('dmlab'))
 
 @_add_dataset
 def clevr_count_all(root):
@@ -380,7 +384,8 @@ def clevr(root,task):
         classes = _load_classnames("clevr_closest_object_distance")
     else:
         raise ValueError(f"non supported: {task}")
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def svhn(root):
@@ -388,7 +393,8 @@ def svhn(root):
     tfds_dataset = SvhnData(data_dir=data_dir)
     classes = classnames["svhn"]
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def smallnorb_label_azimuth(root):
@@ -401,7 +407,8 @@ def smallnorb(root,task,transform=None):
     tfds_dataset = SmallNORBData(predicted_attribute=task, data_dir=data_dir)
     classes = tfds_dataset._dataset_builder.info.features[task].names
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def dsprites_label_orientation(root):
@@ -414,7 +421,8 @@ def dsprites(root,task,transform=None):
     tfds_dataset = DSpritesData(task, data_dir=data_dir)
     classes = tfds_dataset._dataset_builder.info.features[task].names
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def kitti_closest_vehicle_distance(root):
@@ -434,7 +442,8 @@ def kitti(root,task):
     else:
         raise ValueError(f"Unsupported task: {task}")
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
     
 @_add_dataset
 def caltech101(root,batch_size=64):
@@ -442,9 +451,10 @@ def caltech101(root,batch_size=64):
     tfds_dataset = Caltech101(data_dir=root)
     classes = _load_classnames("caltech101_vtab")
     transform, _ = _get_transforms(augment=False)
+    return tfds_dataset, tfds_dataset, 'tfds'
     # tfds_dataset = tfds_dataset.get_tf_data('train', batch_size=64, epochs=1, for_eval=True)
-    # return tfds_dataset,tfds_dataset
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    # return tfds_dataset._dataset_builder.as_dataset(split='train'),tfds_dataset._dataset_builder.as_dataset(split='test'),'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
     # train_set = tfds.as_numpy(tfds_dataset.batch(batch_size))
     # tfds_dataset.get_tf_data('train', batch_size=self.batch_size, epochs=1, for_eval=True)
     # return train_set, train_set
@@ -471,7 +481,7 @@ def cifar10(root):
     ])
     trainset = CIFAR10(root, train=True, transform=transform, download=True)
     testset = CIFAR10(root, train=False, transform=transform)
-    return trainset, testset
+    return trainset, testset, 'ptds'
 
 
 @_add_dataset
@@ -483,7 +493,7 @@ def cifar100(root):
         transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ])
     trainset = CIFAR100(root, train=True, transform=transform, download=True)
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 @_add_dataset
 def pcam(root):
@@ -498,7 +508,7 @@ def pcam(root):
     classes = _load_classnames("pcam")
     trainset.classes = classes
     testset.classes = classes
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 
 @_add_dataset
@@ -513,7 +523,7 @@ def sun397(root):
     testset = SUN397(root, train=False, transform=transform)
     # ds = SUN397(root=root, transform=transform, download=True, **kwargs)
     # trainset.classes = [cl.replace("_", " ").replace("/", " ") for cl in ds.classes]
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 
 
@@ -528,7 +538,7 @@ def mnist(root):
     ])
     trainset = MNIST(root, train=True, transform=transform, download=True)
     testset = MNIST(root, train=False, transform=transform)
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 
 @_add_dataset
@@ -542,7 +552,7 @@ def letters(root):
     ])
     trainset = EMNIST(root, train=True, split='letters', transform=transform, download=True)
     testset = EMNIST(root, train=False, split='letters', transform=transform)
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 @_add_dataset
 def food101(root):
@@ -552,7 +562,7 @@ def food101(root):
     testset = Food101(root, split='test', transform=transform)
     trainset.targets = trainset._labels
     testset.targets = testset._labels
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 @_add_dataset
 def kmnist(root):
@@ -564,7 +574,7 @@ def kmnist(root):
     ])
     trainset = KMNIST(root, train=True, transform=transform, download=True)
     testset = KMNIST(root, train=False, transform=transform)
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 
 @_add_dataset
@@ -579,7 +589,7 @@ def stl10(root):
     testset = STL10(root, split='test', transform=transform)
     trainset.targets = trainset.labels
     testset.targets = testset.labels
-    return trainset, testset
+    return trainset, testset, 'tvds'
 
 @_add_dataset
 def diabetic_retinopathy(root):
@@ -601,7 +611,8 @@ def diabetic_retinopathy(root):
     classes = classnames["diabetic_retinopathy"]
 
     transform, _ = _get_transforms(augment=False)
-    return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    return tfds_dataset, tfds_dataset, 'tfds'
+    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def huggingfacepics_corgi(root):

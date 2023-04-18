@@ -4,6 +4,8 @@ from torch.utils import data
 from torchvision import transforms
 import torch
 import torchvision
+import tensorflow_datasets as tfds
+import tensorflow as tf
 from tqdm import tqdm
 import numpy as np
 import random
@@ -39,33 +41,33 @@ datasets_list = [
                     'Matthijs/snacks','keremberke/chest-xray-classification'
                 ]
 
-for dataset_name in datasets_list[3:]:
+for dataset_name in datasets_list[3:4]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
-    ds = dataset.__dict__[dataset_name]('../../datasets/')[0]
-    if len(ds)<MAX_NUM_SAMPLES: 
-        LEN = len(ds)
+    ds, _, ds_type = dataset.__dict__[dataset_name]('../../datasets/')
+    try:
+        length = len(ds)
+    except:
+        length = ds.get_num_samples('train')
+    if length < MAX_NUM_SAMPLES: 
+        LEN = length
     else:
         LEN = MAX_NUM_SAMPLES
-    print(f'dataset size: {len(ds)}')
+    print(f'dataset size: {length}')
     print(type(ds))
+    
+    # randomly sample MAX_NUM_SAMPLES
+    idx = random.sample(range(length), k=LEN)
 
-    # dataloader = DataLoader(
-    #                 ds,
-    #                 batch_size=64, # may need to reduce this depending on your GPU 
-    #                 num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-    #                 shuffle=False,
-    #                 drop_last=False,
-    #                 pin_memory=True
-    #             )
-    # Feature extraction.
+    ## Feature initiation.
     features = torch.zeros(1,FEATURE_DIM).to(device)
     print(f'features.shape: {features.shape}')
     labels = torch.zeros(1).to(device)
+
+    ## Load dataset
     print_flag = True
-    if not isinstance(ds,VTABIterableDataset):
-        print('is tfds type')
-        idx = random.sample(range(len(ds)), k=LEN)
+    if ds_type != 'tfds':
+        print('is torchvision dataset type')
         ds = torch.utils.data.Subset(ds, idx)
         dataloader = DataLoader(
                     ds,
@@ -87,22 +89,33 @@ for dataset_name in datasets_list[3:]:
                     features = torch.cat((features,feature),0)
                 labels = torch.cat((labels,y.to(device)),0)
     else:
-        for (x,y) in tqdm(ds):
-                # inputs = data[0]#(data['image'].numpy())
-                # y = data[1] #data['label'].numpy()
-                # for x, label in zip(inputs, y):
-                #     # if self.target_transform is not None:
-                #     #     label = self.target_transform(label)
-                #   print(f'x.shape:{x.shape}')
-                    if GET_FEATURE:
-                        x = torch.reshape(x,(1,)+x.shape)
-                        output = model(x.to(device))
-                        if print_flag:
-                            print(f'output.pooler_output: {output.pooler_output.shape}')
-                            print_flag = False
-                        feature = torch.reshape(output.pooler_output,(1,FEATURE_DIM))
-                        features = torch.cat((features,feature),0)
-                    # labels = torch.cat((labels,y),0)
+        print('is tfds dataset type')
+        batch_size = 1
+        dataloader =  VTABIterableDataset(
+                        ds, 
+                        input_name="image", label_name="label",  
+                        target_transform=int,
+                        split='train',
+                        batch_size=batch_size,
+                    )
+        for i,data in enumerate(tqdm(dataloader)):
+            if i > LEN: break
+            # data = tfds.as_numpy(data)
+            x = data[0] # (data['image'].numpy())
+            y = data[1] # data['label'].numpy()
+            # for x, label in zip(inputs, y):
+            #     # if self.target_transform is not None:
+            #     #     label = self.target_transform(label)
+            #   print(f'x.shape:{x.shape}')
+            if GET_FEATURE:
+                x = torch.reshape(x,(batch_size,)+x.shape)
+                output = model(x.to(device))
+                if print_flag:
+                    print(f'output.pooler_output: {output.pooler_output.shape}')
+                    print_flag = False
+                feature = torch.reshape(output.pooler_output,(batch_size,FEATURE_DIM))
+                features = torch.cat((features,feature),0)
+            # labels = torch.cat((labels,y),0)
 
     
     if not os.path.exists(os.path.join('./feature', model_name)):

@@ -41,7 +41,7 @@ datasets_list = [
                     'Matthijs/snacks','keremberke/chest-xray-classification'
                 ]
 
-for dataset_name in datasets_list[3:4]:
+for dataset_name in datasets_list[20:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
     ds, _, ds_type = dataset.__dict__[dataset_name]('../../datasets/')
@@ -66,27 +66,6 @@ for dataset_name in datasets_list[3:4]:
 
     ## Load dataset
     print_flag = True
-    if ds_type == 'tfds':
-        print('is tfds dataset type')
-        batch_size = 1
-        transform = transforms.Compose([
-                            transforms.ToPILImage(),
-                            transforms.Resize((224,224)),
-                            transforms.ToTensor(),
-                        ])
-        iterator = ds.get_tf_data('train', batch_size=1, epochs=1, for_eval=True)# self.batch_size = 1
-        inputs = []
-        labels = []
-        for data in iterator:
-            image = data['image'].numpy()
-            shape = image.shape
-            image = np.reshape(image,(shape[1],shape[2],shape[3]))
-            inputs.append(transform(image))
-            labels.append(data['label'].numpy())
-        # print(len(inputs),len(labels),labels[0].shape)
-        ds = torch.utils.data.TensorDataset(torch.stack(inputs),torch.from_numpy(np.stack(labels).reshape(len(labels))))
-        print(f'tf_data: {type(ds)}')
-
     ds = torch.utils.data.Subset(ds, idx)
     dataloader = DataLoader(
                     ds,
@@ -98,15 +77,17 @@ for dataset_name in datasets_list[3:4]:
                 )
     print(f'dataloader size: {len(dataloader)}')
     with torch.no_grad():
-        for x, y in tqdm(dataloader):
+        for x,y in tqdm(dataloader):
             if GET_FEATURE:
                 output = model(x.to(device))
                 if print_flag:
+                    # print(batch)
                     print('-----------')
                     print(f'x.shape: {x.shape},y.shape:{y.shape}')
                     print(f'output.pooler_output: {output.pooler_output.shape}')
                     print('-----------')
                     print_flag = False
+                
                 feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))
                 features_tensor = torch.cat((features_tensor,feature),0)
             labels_tensor = torch.cat((labels_tensor,y.to(device)),0)

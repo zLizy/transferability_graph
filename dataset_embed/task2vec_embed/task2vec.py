@@ -232,7 +232,8 @@ class Task2Vec:
         logging.info("Caching features...")
         if loader_opts is None:
             loader_opts = {}
-        data_loader = DataLoader(dataset, shuffle=False, batch_size=loader_opts.get('batch_size', 64),
+        # batchsize = 64
+        data_loader = DataLoader(dataset, shuffle=False, batch_size=loader_opts.get('batch_size', 16),
                                  num_workers=loader_opts.get('num_workers', 6), drop_last=False)
 
         device = next(self.model.parameters()).device
@@ -287,7 +288,11 @@ class Task2Vec:
             for data, target in data_loader:
                 optimizer.zero_grad()
                 output = self.model.classifier(data)
-                loss = loss_fn(self.model.classifier(data), target)
+                try:
+                    loss = loss_fn(self.model.classifier(data), target)
+                except Exception as e:
+                    print(e)
+                    loss = loss_fn(self.model.classifier(data), target.to(torch.int64).to(self.device))
                 error = get_error(output, target)
                 loss.backward()
                 optimizer.step()

@@ -491,7 +491,8 @@ def _select_targets(output: Tensor, target: TargetType) -> Tensor:
     if target is None:
         return output
 
-    output = output.pooler_output
+    # output = output.pooler_output
+    output = output.logits
     num_examples = output.shape[0]
     dims = len(output.shape)
     device = output.device

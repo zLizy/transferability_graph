@@ -11,10 +11,10 @@ from requests.exceptions import HTTPError
 from io import BytesIO
 from pathlib import Path
 import torch
-import pytorch_lightning as pl
+# import pytorch_lightning as pl
 from huggingface_hub import HfApi, HfFolder, Repository, notebook_login
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy
+# from torchmetrics import Accuracy
 from torchvision.datasets import ImageFolder
 from transformers import ViTFeatureExtractor, ViTForImageClassification
 
@@ -50,10 +50,11 @@ def urls_to_image_folder(urls, save_directory):
         image.save(save_directory / f'{i}.jpg')
 
 
-def get_huggingfacepics_data_set_by_all_search_term(all_search_term):
+def get_huggingfacepics_data_set_by_all_search_term(all_search_term,transform=None):
     all_search_term = all_search_term
     data_dir = Path(
-        '../../datasets/huggingfacepics/' + dateutil.utils.today().strftime('%Y-%m-%d') + all_search_term.__str__())
+        '../../datasets/hfpics/' + all_search_term.__str__())
+        # '../../datasets/huggingfacepics/' + dateutil.utils.today().strftime('%Y-%m-%d') + all_search_term.__str__())
 
     if data_dir.exists():
         print("Already searched this huggingfacepics keyword combination today, using that.")
@@ -65,10 +66,11 @@ def get_huggingfacepics_data_set_by_all_search_term(all_search_term):
             print(f"Saving images of {search_term} to {str(search_term_dir)}...")
             urls_to_image_folder(urls, search_term_dir)
 
-    dataset = ImageFolder(data_dir)
-    indices = torch.randperm(len(dataset)).tolist()
-    n_val = math.floor(len(indices) * .15)
-    train_dataset = torch.utils.data.Subset(dataset, indices[:-n_val])
-    test_dataset = torch.utils.data.Subset(dataset, indices[-n_val:])
+    dataset = ImageFolder(data_dir,transform=transform)
+    # indices = torch.randperm(len(dataset)).tolist()
+    # n_val = math.floor(len(indices) * .15)
+    # train_dataset = torch.utils.data.Subset(dataset, indices[:-n_val])
+    # test_dataset = torch.utils.data.Subset(dataset, indices[-n_val:])
+    # print(dataset)
 
-    return train_dataset, test_dataset
+    return dataset, dataset,'hfpics'

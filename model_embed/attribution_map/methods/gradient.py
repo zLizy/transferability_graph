@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Any, Callable, cast, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
-from common import (
+from methods.common import (
     _reduce_list,
     _run_forward,
     _sort_key_list,

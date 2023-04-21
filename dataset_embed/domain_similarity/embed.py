@@ -44,7 +44,14 @@ datasets_list = [
 for dataset_name in datasets_list[20:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
-    ds, _, ds_type = dataset.__dict__[dataset_name]('../../datasets/')
+    if dataset_name == 'hfpics':
+        # classes = labels.strip('][').replace("'","").split(', ')
+        # print(f'classes: {classes}')
+        classes = "['corgi','']"
+        ds_type = 'hfpics'
+        ds = dataset.__dict__[ds_type]('../../datasets/',classes)
+    else:
+        ds, _, ds_type = dataset.__dict__[dataset_name]('../../datasets/')
     try:
         length = len(ds)
     except:
@@ -56,9 +63,6 @@ for dataset_name in datasets_list[20:]:
     print(f'dataset size: {length}')
     print(type(ds))
     
-    # randomly sample MAX_NUM_SAMPLES
-    idx = random.sample(range(length), k=LEN)
-
     ## Feature initiation.
     features_tensor = torch.zeros(1,FEATURE_DIM).to(device)
     print(f'features.shape: {features_tensor.shape}')
@@ -66,7 +70,10 @@ for dataset_name in datasets_list[20:]:
 
     ## Load dataset
     print_flag = True
+    # randomly sample MAX_NUM_SAMPLES
+    idx = random.sample(range(length), k=LEN)
     ds = torch.utils.data.Subset(ds, idx)
+    
     dataloader = DataLoader(
                     ds,
                     batch_size=64, # may need to reduce this depending on your GPU 

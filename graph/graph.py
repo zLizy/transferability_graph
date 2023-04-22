@@ -16,24 +16,20 @@ class Graph:
         self.data["dataset"].x = dataset_features
         self.data["model"].x = model_features
         self.data["model", "trained_on", "dataset"].edge_index = edge_index_model_to_dataset  # TODO
-        # data['paper', 'cites', 'paper'].edge_attr = ... # [num_edges_cites, num_features_cites]
+        self.data['model', 'trained_on', 'dataset'].edge_attr = ... # TODO
         self.data = T.ToUndirected()(self.data)
         # self.split()
         self._print()
 
     def _print(self):
+        print("Training data:")
+        print("==============")
         print(self.data)
-        # print("Training data:")
-        # print("==============")
-        # print(self.train_data)
-        # print(self.train_data["model", "trained_on", "dataset"].num_edges)
-        # print(self.train_data["model", "trained_on", "dataset"].edge_label_index)
+        print(self.data["model", "trained_on", "dataset"].num_edges)
+        # print(self.data["model", "trained_on", "dataset"].edge_label_index)
         # print(self.train_data["model", "trained_on", "dataset"].edge_label)
-        # print()
-        # print("Validation data:")
-        # print("================")
-        # print(self.val_data)
-    
+        print()
+
     def split(self,num_val=0.1,num_test=0.1):
         transform = T.RandomLinkSplit(
             num_val=num_val,  # TODO

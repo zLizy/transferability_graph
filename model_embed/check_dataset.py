@@ -45,10 +45,13 @@ for i,row in df.iterrows():
       dataset = label2dataset[labels]
       print(f'found {dataset}')
       df_new.loc[i,'dataset'] = dataset
+      df_new.loc[i,'labels'] = dataset
       # df.to_csv(file,index=False)
    elif labels in keywords:
       print(f'found {labels} -- huggingface pics')
       df_new.loc[i,'dataset'] = 'hfpics'
+   else:
+      df_new.loc[i,'labels'] = row['dataset']
     
    # configs = get_dataset_config_names(dataset_name)
    # print(f'configs: {configs}')

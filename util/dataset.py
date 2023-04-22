@@ -721,7 +721,7 @@ def _get_transform(input_shape=224):
     transform = transforms.Compose([
     # transforms.Resize(256),
     # transforms.CenterCrop(input_shape),
-    transforms.Resize(input_shape)
+    transforms.Resize((input_shape,input_shape)),
     transforms.ToTensor(),
     transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],
@@ -730,9 +730,9 @@ def _get_transform(input_shape=224):
     ])
     return transform
 
-def hfpics(root,classes,input_shape):
+def hfpics(root,classes,input_shape=224):
     from util._dataset.huggingfacepics import get_huggingfacepics_data_set_by_all_search_term
-    return get_huggingfacepics_data_set_by_all_search_term(classes,transform=_get_transform(input_shape))
+    return get_huggingfacepics_data_set_by_all_search_term(root,classes,transform=_get_transform(input_shape))
 
 #### HuggingFace Datasets
 

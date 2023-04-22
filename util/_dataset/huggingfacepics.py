@@ -50,10 +50,10 @@ def urls_to_image_folder(urls, save_directory):
         image.save(save_directory / f'{i}.jpg')
 
 
-def get_huggingfacepics_data_set_by_all_search_term(all_search_term,transform=None):
+def get_huggingfacepics_data_set_by_all_search_term(root,all_search_term,transform=None):
     all_search_term = all_search_term
     data_dir = Path(
-        '../../datasets/hfpics/' + all_search_term.__str__())
+        f'{root}/hfpics/' + all_search_term.__str__())
         # '../../datasets/huggingfacepics/' + dateutil.utils.today().strftime('%Y-%m-%d') + all_search_term.__str__())
 
     if data_dir.exists():

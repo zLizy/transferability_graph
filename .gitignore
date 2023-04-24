@@ -10,3 +10,4 @@ movie_user_example.py
 *npy
 .idea
 *.p
+__pycache__/

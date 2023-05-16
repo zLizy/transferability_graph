@@ -62,23 +62,27 @@ def _add_method(method_fn):
 
 
 @_add_method
-def saliency(model,input,label):
+def saliency(model,input,label,IMAGE_SHAPE):
     saliency = Saliency(model)
     # print(saliency)
     # input_new = transforms.Resize(input_shape)(input)
-    grads = saliency.attribute(input.to(device), target=torch.tensor(label).to(device))
+    grads = saliency.attribute(input.to(torch.float).to(device), target=label.to(device))
     # print(f'grads.shape: {grads.shape}')
     # grads = np.transpose(grads.squeeze().cpu().detach().numpy(), (0, 2, 3, 1))
     return grads
     # print(grads.shape)
 
 @_add_method
-def input_x_gradient(model,input,label):
+def input_x_gradient(model,input,label,IMAGE_SHAPE):
     # integrated_gradients = IntegratedGradients(model)
-    # attributions_ig = integrated_gradients.attribute(input, target=label, n_steps=200)
+    # attribution = integrated_gradients.attribute(input.to(device), target=label.clone().detach().to(device), n_steps=200)
     input_x_gradient = InputXGradient(model)
-    # Computes inputXgradient for class 4.
-    attribution = input_x_gradient.attribute(input.to(device), target=torch.tensor(label).to(device))
+    # # Computes inputXgradient for class 4.
+    try:
+        attribution = input_x_gradient.attribute(input.to(torch.float).to(device), target=label.to(device))
+    except TypeError as e:
+        print(e)
+        attribution = np.zeros((1,)+IMAGE_SHAPE)
     return attribution
 
 @_add_method
@@ -91,28 +95,37 @@ def elrp(model,input,label):
 def main():
     INPUT_SHAPE = 224
     # imlist_size = 1
-    explain_methods = ['elrp','saliency','input_x_gradient']
+    explain_methods = ['input_x_gradient']#'elrp','saliency',
     
     # columns = [model,input_shape,output_shape,architectures,task,dataset,#labels,labels,task_specific_params,problem_type,finetuning_task]
     ### Get model and dataset info
     file = '../../doc/model_config_dataset.csv'
     df = pd.read_csv(file)
-    for i, row in df.iloc[75:].iterrows():
+    df['dataset'] = df['labels']
+    for i, row in df.iloc[:].iterrows():
         dataset_name = row['dataset']
         dataset_name = dataset_name.replace('/','_').replace('-','_')   
-        if dataset_name == 'eurosat': continue        
+        
+        # if dataset_name == 'eurosat': continue        
         model_name = row['model']
         print(f'=========== model_name: {model_name}; dataset_name: {dataset_name} ===============')
+        if dataset_name in ['FastJobs_Visual_Emotional_Analysis','poolrf2001_facemask','davanstrien_iiif_manuscripts_label_ge_50']: 
+            continue
+        if dataset_name == 'imagenet_21k': dataset_name = 'imagenet'
         INPUT_SHAPE = int(row['input_shape'])
         print(f'input_shape: {INPUT_SHAPE}')
+        path = os.path.join(f'./feature',dataset_name,model_name.replace('/','_')+f'_{explain_methods[0]}.npy')
+        if os.path.exists(path): 
+            print(f'== exist path: {path}')
+            continue
         # Load dataset
-        torch.cuda.empty_cache()
-        if dataset_name == 'hfpics':
+        # torch.cuda.empty_cache()
+        if '[' in dataset_name:
             classes = row['labels'].strip('][').replace("'","").split(', ')
             print(f'classes: {classes}')
             try:
                 ds, _, ds_type = dataset.__dict__['hfpics']('../../datasets/',classes,input_shape=INPUT_SHAPE)
-            except Exception as e:
+            except FileNotFoundError as e:
                 print(e)
                 continue
             dataset_name = classes
@@ -123,13 +136,15 @@ def main():
                 print(e)
                 continue
         print(f'== finish loading dataset, len(ds): {len(ds)}')
-        # input = torch.rand(1,3,INPUT_SHAPE,INPUT_SHAPE).cuda()
-        baseline = torch.zeros(1,3,INPUT_SHAPE, INPUT_SHAPE).cuda()
+        
         # Load model
         # imgclassification_name = row['architecture'].replace("'","").replace('[','').replace(']','').lower()
         try:
             # model = AutoModel.from_pretrained(model_name).cuda()
-            model = AutoModelForImageClassification.from_pretrained(model_name).to(device)
+            model = AutoModelForImageClassification.from_pretrained(model_name,problem_type="multi_class_classification").to(device)
+            for param in model.base_model.parameters():
+                param.requires_grad = True
+            model.train()
             # model = _CLASSIFIER.__dict__[imgclassification_name](model_name)
             print('== Finish loading model')
         except Exception as e:
@@ -145,10 +160,11 @@ def main():
         ## initiate embeddings
         imlist_size = len(ds)
         # elrp = torch.zeros([1] + list(IMAGE_SHAPE), float).to(device)
-        elrp = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        salien = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        gradXinput = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        print(salien.shape)
+        # elrp = torch.zeros((1,)+IMAGE_SHAPE).to(device)
+        # salien = torch.zeros((1,)+IMAGE_SHAPE).to(device)
+        # gradXinput = torch.zeros((1,)+IMAGE_SHAPE).to(device)
+        features = np.zeros((1,)+IMAGE_SHAPE)
+        print(features.shape)
 
         # get attribution map attribute
         LEN = min(5000,imlist_size)
@@ -156,39 +172,50 @@ def main():
         ds = torch.utils.data.Subset(ds, idx)
         dataloader = DataLoader(
                     ds,
-                    batch_size=32, # may need to reduce this depending on your GPU 
+                    batch_size=8, # may need to reduce this depending on your GPU 
                     num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
                     shuffle=False,
                     drop_last=False,
-                    pin_memory=True
+                    # pin_memory=True
                 )
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         with torch.no_grad():
             for x,y in tqdm(dataloader):
-                attributions = {}
+                attributions = {explain_methods[0]:0}
                 for explain_method in explain_methods:
                     try:
-                        attributions[explain_method] =  _METHODS[explain_method](model,x,y) 
-                    except Exception as e:
+                        attribution =  _METHODS[explain_method](model,x,y,IMAGE_SHAPE)
+                        if isinstance(attribution,np.ndarray):
+                            attributions[explain_method] = attribution
+                        else:
+                            attributions[explain_method] = attribution.cpu().detach().numpy()
+                            continue
+                    except RuntimeError as e:
                         print(e)
-                        attributions[explain_method] = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-                elrp = torch.cat((elrp,attributions['elrp']),0)
-                salien = torch.cat((elrp,attributions['saliency']),0)
-                gradXinput = torch.cat((gradXinput,attributions['input_x_gradient']),0)
+                        continue
+                        # attributions[explain_method] = torch.zeros((1,)+IMAGE_SHAPE).to(device)
+                        # attributions[explain_method] = np.zeros((1,)+IMAGE_SHAPE)
+                # elrp = torch.cat((elrp,attributions['elrp']),0)
+                # salien = torch.cat((elrp,attributions['saliency']),0)
+                # gradXinput = torch.cat((gradXinput,attributions['input_x_gradient']),0)
+                if (attributions[explain_method] == np.zeros((1,)+IMAGE_SHAPE)).all(): continue
+                features = np.concatenate((features,attributions['input_x_gradient']),0)
                 # saliency[im_i] = attributions['saliency']
                 # if ((im_i+1) % 500) == 0:
                 #     print('{} images done.'.format(im_i))
-        elrp = elrp.cpu().detach().numpy()[1:]
-        salien = salien.cpu().detach().numpy()[1:]
-        gradXinput = gradXinput.cpu().detach().numpy()[1:]
-        print(f'gradXinput.shape: {gradXinput.shape}')
+        # elrp = elrp.cpu().detach().numpy()[1:]
+        # salien = salien.cpu().detach().numpy()[1:]
+        if (features == np.zeros((1,)+IMAGE_SHAPE)).all(): continue
+        features = features[1:]#.cpu().detach().numpy()[1:]
+        print(f'gradXinput.shape: {features.shape}')
 
         ######### Save features ###########
         model_name = model_name.replace('/','_')
         if not os.path.exists(os.path.join('./feature', f'{dataset_name}')):
             os.makedirs(os.path.join('./feature', f'{dataset_name}'))
         
-        features = {'elrp':elrp, 'saliency':salien, 'input_x_gradient':gradXinput}
+        # features = {'elrp':elrp, 'saliency':salien, 'input_x_gradient':gradXinput}
+        features = {'input_x_gradient':features}
         for method in explain_methods:
             attributes = np.mean(features[method],axis=0)
             print(f'attributes.shape: {attributes.shape}')

@@ -15,44 +15,23 @@ from transformers import AutoModelForImageClassification
 
 import os
 import sys
-sys.path.append('../../')
+sys.path.append('../')
 import random
 from util import dataset
-from methods._model import *
+from model_embed.attribution_map.methods._model import *
 
 from captum.attr import IntegratedGradients
-from methods.saliency import Saliency
-from methods.lrp import LRP
+from model_embed.attribution_map.methods.saliency import Saliency
+from model_embed.attribution_map.methods.lrp import LRP
 from captum.attr import DeepLift
-from methods.input_x_gradient import InputXGradient
+from model_embed.attribution_map.methods.input_x_gradient import InputXGradient
 from captum.attr import NoiseTunnel
 from captum.attr import GradientShap
 from captum.attr import Occlusion
 from captum.attr import NoiseTunnel
 from captum.attr import visualization as viz
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-def get_model(model_idx):
-    file = '../../doc/model_config_dataset.csv'
-    ds = ''
-    ds_name = ''
-    df = pd.read_csv(file)
-    # About 291 models
-    model_list = np.unique(df['model'])
-    # for i, row in df.loc[10:15].iterrows():
-    
-    print('==============')
-    model_name = model_list[model_idx]
-    print(f'model_name: {model_name}')
-    try:
-        model = AutoModel.from_pretrained(model_name).cuda()
-    except Exception as e:
-        print('================')
-        print(e)
-        print(f'Fail - model_name: {model_name}')
-        return
-    
-    return model
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')# cuda
+CUDA_LAUNCH_BLOCKING=1
 
 _METHODS = {}
 
@@ -66,7 +45,7 @@ def saliency(model,input,label):
     saliency = Saliency(model)
     # print(saliency)
     # input_new = transforms.Resize(input_shape)(input)
-    grads = saliency.attribute(input.to(device), target=torch.tensor(label).to(device))
+    grads = saliency.attribute(input.requires_grad_(True).to(device), target=torch.tensor(label).to(device))#target=.to(device)), label.clone().detach().requires_grad_(True)
     # print(f'grads.shape: {grads.shape}')
     # grads = np.transpose(grads.squeeze().cpu().detach().numpy(), (0, 2, 3, 1))
     return grads
@@ -88,43 +67,18 @@ def elrp(model,input,label):
     attribution = lrp.attribute(input.to(device), target=torch.tensor(label).to(device))
     return attribution
 
-def main():
-    INPUT_SHAPE = 224
-    # imlist_size = 1
-    explain_methods = ['elrp','saliency','input_x_gradient']
-    
-    # columns = [model,input_shape,output_shape,architectures,task,dataset,#labels,labels,task_specific_params,problem_type,finetuning_task]
-    ### Get model and dataset info
-    file = '../../doc/model_config_dataset.csv'
-    df = pd.read_csv(file)
-    for i, row in df.iloc[75:].iterrows():
-        dataset_name = row['dataset']
-        dataset_name = dataset_name.replace('/','_').replace('-','_')   
-        if dataset_name == 'eurosat': continue        
-        model_name = row['model']
-        print(f'=========== model_name: {model_name}; dataset_name: {dataset_name} ===============')
-        INPUT_SHAPE = int(row['input_shape'])
-        print(f'input_shape: {INPUT_SHAPE}')
-        # Load dataset
-        torch.cuda.empty_cache()
-        if dataset_name == 'hfpics':
-            classes = row['labels'].strip('][').replace("'","").split(', ')
-            print(f'classes: {classes}')
-            try:
-                ds, _, ds_type = dataset.__dict__['hfpics']('../../datasets/',classes,input_shape=INPUT_SHAPE)
-            except Exception as e:
-                print(e)
-                continue
-            dataset_name = classes
-        else:
-            try:
-                ds, _, ds_type = dataset.__dict__[dataset_name.lower()]('../../datasets/',input_shape=INPUT_SHAPE)
-            except Exception as e:
-                print(e)
-                continue
-        print(f'== finish loading dataset, len(ds): {len(ds)}')
-        # input = torch.rand(1,3,INPUT_SHAPE,INPUT_SHAPE).cuda()
-        baseline = torch.zeros(1,3,INPUT_SHAPE, INPUT_SHAPE).cuda()
+def embed(root,model_name,dataset_name,method,input_shape=224,batch_size=64):
+    try:
+        from util import dataset
+    except:
+        from ..util import dataset
+    # model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
+    # dataloader = dataset.get_dataset(root,dataset_name,input_shape=input_shape,batch_size=batch_size)
+    dataloader = dataset.get_dataloader(root,dataset_name,data_sets=[],input_shape=input_shape,splits=[''])[0]
+    features_tensor = get_features(root,model_name,dataset_name,dataloader,method,input_shape)
+    return features_tensor
+
+def get_features(root,model_name,dataset_name,dataloader,method,input_shape=224):
         # Load model
         # imgclassification_name = row['architecture'].replace("'","").replace('[','').replace(']','').lower()
         try:
@@ -136,75 +90,33 @@ def main():
             print('================')
             print(e)
             print(f'== Fail - model_name: {model_name}')
-            continue
-        # get model
-        # idx = 0
-        # model = get_model(idx)
         # input_shape = model.config.image_size
-        IMAGE_SHAPE = (3,INPUT_SHAPE,INPUT_SHAPE)
+        IMAGE_SHAPE = (3,input_shape,input_shape)
         ## initiate embeddings
-        imlist_size = len(ds)
-        # elrp = torch.zeros([1] + list(IMAGE_SHAPE), float).to(device)
-        elrp = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        salien = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        gradXinput = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-        print(salien.shape)
+        features = np.zeros((1,)+IMAGE_SHAPE)
+        print(features.shape)
 
-        # get attribution map attribute
-        LEN = min(5000,imlist_size)
-        idx = random.sample(range(imlist_size), k=LEN)
-        ds = torch.utils.data.Subset(ds, idx)
-        dataloader = DataLoader(
-                    ds,
-                    batch_size=32, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=True
-                )
-        torch.cuda.empty_cache()
         with torch.no_grad():
             for x,y in tqdm(dataloader):
-                attributions = {}
-                for explain_method in explain_methods:
-                    try:
-                        attributions[explain_method] =  _METHODS[explain_method](model,x,y) 
-                    except Exception as e:
-                        print(e)
-                        attributions[explain_method] = torch.zeros((1,)+IMAGE_SHAPE).to(device)
-                elrp = torch.cat((elrp,attributions['elrp']),0)
-                salien = torch.cat((elrp,attributions['saliency']),0)
-                gradXinput = torch.cat((gradXinput,attributions['input_x_gradient']),0)
-                # saliency[im_i] = attributions['saliency']
-                # if ((im_i+1) % 500) == 0:
-                #     print('{} images done.'.format(im_i))
-        elrp = elrp.cpu().detach().numpy()[1:]
-        salien = salien.cpu().detach().numpy()[1:]
-        gradXinput = gradXinput.cpu().detach().numpy()[1:]
-        print(f'gradXinput.shape: {gradXinput.shape}')
+                    # torch.cuda.empty_cache()
+                    # try:
+                    # print(x.shape,y.shape)
+                    attributions =  _METHODS[method](model,x,y) 
+                    attributions = attributions.cpu().detach().numpy()
+                    # except Exception as e:
+                    #     print(e)
+                    #     attributions = np.zeros((1,)+IMAGE_SHAPE)
+                    features = np.concatenate((features,attributions),0)
+        features = features[1:]
+        print(f'features.shape: {features.shape}')
 
         ######### Save features ###########
         model_name = model_name.replace('/','_')
-        if not os.path.exists(os.path.join('./feature', f'{dataset_name}')):
-            os.makedirs(os.path.join('./feature', f'{dataset_name}'))
-        
-        features = {'elrp':elrp, 'saliency':salien, 'input_x_gradient':gradXinput}
-        for method in explain_methods:
-            attributes = np.mean(features[method],axis=0)
-            print(f'attributes.shape: {attributes.shape}')
-            if (attributes != np.zeros((1,)+IMAGE_SHAPE)).all():
-                np.save(os.path.join('./feature', f'{dataset_name}',f'{model_name}_{method}.npy'), attributes)
-        ############## Reset graph and paths ##############
-        # print('Task {} Done!'.format(task))
-    print('All Done.')
-    return
+        if not os.path.exists(os.path.join(root,'model_embed/attribution_map/feature', f'{dataset_name}')):
+            os.makedirs(os.path.join(root,'model_embed/attribution_map/feature', f'{dataset_name}'))
+        attributes = np.mean(features,axis=0)
+        print(f'attributes.shape: {attributes.shape}')
+        if (attributes != np.zeros((1,)+IMAGE_SHAPE)).all():
+            np.save(os.path.join(root,'model_embed/attribution_map/feature', f'{dataset_name}',f'{model_name}_{method}.npy'), attributes)
+        return attributes
 
-    # _ = viz.visualize_image_attr_multiple(grads,
-    #                                     np.transpose(transformed_img.squeeze().cpu().detach().numpy(), (1,2,0)),
-    #                                     ["original_image", "heat_map"],
-    #                                     ["all", "positive"],
-    #                                     cmap=default_cmap,
-    #                                     show_colorbar=True)
-
-if __name__ == "__main__":
-    main()

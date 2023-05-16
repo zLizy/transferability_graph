@@ -28,9 +28,12 @@ dataset2label = {'chest-xray-pneumonia': "['NORMAL', 'PNEUMONIA']",
 
 label2dataset = {v:k for k,v in dataset2label.items()}
 
-file = '../doc/model_config.csv'
-df = pd.read_csv(file)
-df_new = df.copy()
+file = '../doc/text_model_config.csv'
+if os.path.exists(file):
+   df = pd.read_csv(file)
+   df_new = df.copy()
+else:
+   df_new = 
 
 hg_file = '../doc/hgpics_keyword.csv'
 df_hgpics = pd.read_csv(hg_file)

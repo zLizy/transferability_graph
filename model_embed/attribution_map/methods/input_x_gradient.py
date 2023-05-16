@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 from typing import Any, Callable
-
-from methods.common import _format_output, _format_tensor_into_tuples, _is_tuple
+import sys
+sys.path.append('../')
+from model_embed.attribution_map.methods.common import _format_output, _format_tensor_into_tuples, _is_tuple
 from captum._utils.gradient import (
     apply_gradient_requirements,
     undo_gradient_requirements,
 )
 from captum._utils.typing import TargetType, TensorOrTupleOfTensorsGeneric
-from methods.attribution import GradientAttribution
+from model_embed.attribution_map.methods.attribution import GradientAttribution
 from captum.log import log_usage
 
 

@@ -67,6 +67,7 @@ def get_huggingfacepics_data_set_by_all_search_term(root,all_search_term,transfo
             urls_to_image_folder(urls, search_term_dir)
 
     dataset = ImageFolder(data_dir,transform=transform)
+    dataset.classes = all_search_term
     # indices = torch.randperm(len(dataset)).tolist()
     # n_val = math.floor(len(indices) * .15)
     # train_dataset = torch.utils.data.Subset(dataset, indices[:-n_val])

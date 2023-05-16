@@ -34,17 +34,19 @@ model = ResNetModel.from_pretrained("microsoft/resnet-50").to(device)
 df = pd.read_csv('../../doc/model_config_dataset.csv')
 
 ## Load datasets
-datasets_list = [
-                    'food101','cifar10','cifar100','caltech101',
-                    'stanfordcars','eurosat','clevr_count_all','clevr_closest_object_distance',
-                    'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',
-                    'pcam','sun397','smallnorb_label_azimuth','smallnorb_label_elevation',
-                    'svhn','resisc45','diabetic_retinopathy',
-                    'cats_vs_dogs','keremberke/pokemon-classification','beans','poolrf2001/mask',
-                    'Matthijs/snacks','keremberke/chest-xray-classification'
+datasets_list = [   
+                    'poolrf2001/FaceMask','FastJobs/Visual_Emotional_Analysis'
+    
+                    # 'food101','cifar10','cifar100','caltech101',
+                    # 'stanfordcars','eurosat','clevr_count_all','clevr_closest_object_distance',
+                    # 'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',
+                    # 'pcam','sun397','smallnorb_label_azimuth','smallnorb_label_elevation',
+                    # 'svhn','resisc45','diabetic_retinopathy',
+                    # 'cats_vs_dogs','beans','keremberke/pokemon-classification',
+                    # 'Matthijs/snacks','chest_xray_classification','FastJobs/Visual_Emotional_Analysis',
                 ]
 
-for dataset_name in datasets_list[20:]:
+for dataset_name in datasets_list[:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
     print(f'=========== dataset_name: {dataset_name} ===============')
     if '[' in dataset_name: #  'hfpics'
@@ -55,6 +57,7 @@ for dataset_name in datasets_list[20:]:
         ds_type = 'hfpics'
         ds = dataset.__dict__[ds_type]('../../datasets/',classes)
     else:
+        dataset_name = dataset_name.lower()
         ds, _, ds_type = dataset.__dict__[dataset_name]('../../datasets/')
     try:
         length = len(ds)

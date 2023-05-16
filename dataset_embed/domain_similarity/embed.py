@@ -23,12 +23,17 @@ GET_FEATURE = True
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def embed(root,dataset_name,input_shape=224):
+    try:
+        from util import dataset
+    except:
+        from ..util import dataset
     ### Check output dimension -> it should be 2048
     model_name = 'resnet50'
     # model = torchvision.models.resnet50(weights="DEFAULT")
     model = ResNetModel.from_pretrained("microsoft/resnet-50").to(device)
     # model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
-    dataloader = load_dataset(root,dataset_name,input_shape=input_shape)
+    # root,dataset_name,data_sets=[],input_shape=224,batch_size=16,splits='',return_classes=False
+    dataloader = dataset.get_dataloader(root,dataset_name,data_sets=[],input_shape=input_shape,splits=[''])[0]
     features_tensor, labels_tensor = get_features(model,dataloader)
     feature_per_class = save(root,model_name,dataset_name,features_tensor,labels_tensor,GET_FEATURE=True)
     return feature_per_class
@@ -40,7 +45,7 @@ def load_dataset(root,dataset_name,input_shape=224):
         ds_type = 'hfpics'
         ds,_, ds_type  = dataset.__dict__[ds_type](os.path.join(root,'datasets'),classes,input_shape)
     else:
-        ds, _, ds_type = dataset.__dict__[dataset_name](os.path.join(root,'datasets'))
+        ds, _, ds_type = dataset.__dict__[dataset_name.lower()](os.path.join(root,'datasets'))
     
     try:
         length = len(ds)
@@ -81,10 +86,10 @@ def get_features(model,dataloader,GET_FEATURE=True):
                 output = model(x.to(device))
                 if print_flag:
                     # print(batch)
-                    print('-----------')
-                    print(f'x.shape: {x.shape},y.shape:{y.shape}')
-                    print(f'output.pooler_output: {output.pooler_output.shape}')
-                    print('-----------')
+                    # print('-----------')
+                    # print(f'x.shape: {x.shape},y.shape:{y.shape}')
+                    # print(f'output.pooler_output: {output.pooler_output.shape}')
+                    # print('-----------')
                     print_flag = False
                 
                 feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))

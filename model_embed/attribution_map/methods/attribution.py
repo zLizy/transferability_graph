@@ -3,13 +3,13 @@ from typing import Any, Callable, cast, Generic, List, Tuple, Type, Union
 
 import torch
 import torch.nn.functional as F
-from methods.common import (
+from model_embed.attribution_map.methods.common import (
     _format_additional_forward_args,
     _format_tensor_into_tuples,
     _run_forward,
     _validate_target,
 )
-from methods.gradient import compute_gradients
+from model_embed.attribution_map.methods.gradient import compute_gradients
 from captum._utils.typing import ModuleOrModuleList, TargetType
 from captum.attr._utils.common import (
     _format_input_baseline,

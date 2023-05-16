@@ -21,10 +21,15 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm.auto import tqdm
 import logging
-import variational
+try:
+    import variational
+    from utils import AverageMeter, get_error, get_device
+except:
+    from dataset_embed.task2vec_embed import variational
+    from dataset_embed.task2vec_embed.utils import AverageMeter, get_error, get_device
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.optimizer import Optimizer
-from utils import AverageMeter, get_error, get_device
+
 
 
 class Embedding:
@@ -233,7 +238,7 @@ class Task2Vec:
         if loader_opts is None:
             loader_opts = {}
         # batchsize = 64
-        data_loader = DataLoader(dataset, shuffle=False, batch_size=loader_opts.get('batch_size', 16),
+        data_loader = DataLoader(dataset, shuffle=False, batch_size=loader_opts.get('batch_size', 1), #16
                                  num_workers=loader_opts.get('num_workers', 6), drop_last=False)
 
         device = next(self.model.parameters()).device

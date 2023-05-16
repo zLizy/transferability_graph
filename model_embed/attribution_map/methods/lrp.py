@@ -6,7 +6,9 @@ from typing import Any, cast, List, Tuple, Union
 from captum.attr._utils.lrp_rules import EpsilonRule
 
 import torch.nn as nn
-from methods.common import (
+import sys
+sys.path.append('../')
+from model_embed.attribution_map.methods.common import (
     _format_output,
     _format_tensor_into_tuples,
     _is_tuple,
@@ -18,7 +20,7 @@ from captum._utils.gradient import (
     undo_gradient_requirements,
 )
 from captum._utils.typing import Literal, TargetType, TensorOrTupleOfTensorsGeneric
-from methods.attribution import GradientAttribution
+from model_embed.attribution_map.methods.attribution import GradientAttribution
 from captum.attr._utils.common import _sum_rows
 from captum.attr._utils.custom_modules import Addition_Module
 from captum.attr._utils.lrp_rules import EpsilonRule, PropagationRule

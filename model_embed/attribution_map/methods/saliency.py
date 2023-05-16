@@ -3,13 +3,17 @@
 from typing import Any, Callable
 
 import torch
-from methods.common import _format_output, _format_tensor_into_tuples, _is_tuple
-from methods.gradient import (
+import sys
+sys.path.append('../')
+# from model_embed.attribution_map import methods
+from model_embed.attribution_map.methods.common import _format_output, _format_tensor_into_tuples, _is_tuple
+from model_embed.attribution_map.methods.gradient import (
     apply_gradient_requirements,
     undo_gradient_requirements,
 )
+from model_embed.attribution_map.methods.attribution import GradientAttribution
 from captum._utils.typing import TargetType, TensorOrTupleOfTensorsGeneric
-from methods.attribution import GradientAttribution
+
 from captum.log import log_usage
 
 
@@ -122,4 +126,5 @@ class Saliency(GradientAttribution):
         else:
             attributions = gradients
         undo_gradient_requirements(inputs, gradient_mask)
+        # print(attributions)
         return _format_output(is_inputs_tuple, attributions)

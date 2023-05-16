@@ -4,14 +4,22 @@ import typing
 import warnings
 from collections import defaultdict
 from typing import Any, Callable, cast, Dict, List, Optional, Sequence, Tuple, Union
-
+CUDA_LAUNCH_BLOCKING=1
 import torch
-from methods.common import (
+import sys
+sys.path.append('../')
+from model_embed.attribution_map.methods.common import (
     _reduce_list,
     _run_forward,
     _sort_key_list,
     _verify_select_neuron,
 )
+# from methods.common import (
+#     _reduce_list,
+#     _run_forward,
+#     _sort_key_list,
+#     _verify_select_neuron,
+# )
 from captum._utils.sample_gradient import SampleGradientWrapper
 from captum._utils.typing import (
     Literal,
@@ -114,7 +122,28 @@ def compute_gradients(
         )
         # torch.unbind(forward_out) is a list of scalar tensor tuples and
         # contains batch_size * #steps elements
-        grads = torch.autograd.grad(torch.unbind(outputs), inputs)
+        # print(f'== outputs: {outputs}')
+        try:
+            grads = torch.autograd.grad(torch.unbind(outputs), inputs,retain_graph=True,allow_unused=True)
+        except Exception as e:
+            print(e)
+            print(f'type: {type(torch.unbind(outputs))}, len(torch.unbind(outputs)): {len(torch.unbind(outputs))}')
+            print(f'type: {type(inputs)}, len(inputs): {len(inputs)}')
+            print(f'type: {type(inputs[0])}, len(inputs[0]): {len(inputs[0])}')
+            print(f'type: {type(torch.unbind(inputs[0]))}, len(inputs): {len(torch.unbind(inputs[0]))}')
+            grads = torch.autograd.grad(torch.unbind(outputs), torch.unbind(inputs[0]),retain_graph=True,allow_unused=True)
+            # print(type(grads))
+            # tmp_grads = list(grads)
+            # for i, grad in enumerate(grads):
+            #     if grad == None:
+            #         print(type(grad))
+            #         tmp_grads[i] = torch.Tensor(0)
+            # if tmp_grads != list(grads):
+            #     stack_grads = torch.stack(tmp_grads)
+            #     tmp = []
+            #     tmp.append(stack_grads)
+            #     grads = tuple(tmp)
+            #     print(f'grads.shape: {len(grads)}, {grads}')
     return grads
 
 

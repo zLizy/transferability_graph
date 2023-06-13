@@ -27,7 +27,7 @@ def mnist(root):
 
 For HuggingFace datasets:
 ```python
-train_dataset = load_dataset('beans', split='train')
+train_dataset = load_dataset('beans', split='train') # name of the dataset
 ```
 ### Dataset name mapping
 - If dataset names start with **tweet_eval** or **glue**, it is a subset of either **tweet_eval** or **glue**

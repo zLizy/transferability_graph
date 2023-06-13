@@ -37,9 +37,11 @@ To get dataset embeddings, two ways are implemented:
 `./dataset_embed/task2vec_embed/embed_task.py`
 - Domain Similarity
 
-`./dataset_embed/domain_similarity/embed.py`
+`./dataset_embed/domain_similarity/embed_offline.py`
 
 ## Model Embeddings
+- Attribution Map
+- `model_embed/attribution_map/embed_offline.py'
 
 ## Graph Construction
 

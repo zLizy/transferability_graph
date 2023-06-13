@@ -48,13 +48,20 @@ To get dataset embeddings, two ways are implemented:
 - Task2VEC
 
 `./dataset_embed/task2vec_embed/embed_task.py`
+
+The features of the datasets are stored under foler: `heterogeneous_graph/dataset_embed/task2vec_embed/feature/` with name as `[dataset_name]_feature.p`, e.g., `caltech101_feature.p`.
+
 - Domain Similarity
 
 `./dataset_embed/domain_similarity/embed_offline.py`
 
+The features of the datasets are stored under foler: `heterogeneous_graph/dataset_embed/domain_similarity/feature/resnet50/` with name as `[dataset_name]_feature.npy`, e.g., `caltech101_feature.npy`.
+
 ## Model Embeddings
 - Attribution Map
-- `model_embed/attribution_map/embed_offline.py'
+Path of the script: `model_embed/attribution_map/embed_offline.py'
+
+The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `cifar10/aaraki_vit-base-patch16-224-in21k-finetuned-cifar10_input_x_gradient.npy` 
 
 ## Graph Construction
 ```cd ./graph ```

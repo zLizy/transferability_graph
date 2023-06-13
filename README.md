@@ -44,6 +44,21 @@ To get dataset embeddings, two ways are implemented:
 - `model_embed/attribution_map/embed_offline.py'
 
 ## Graph Construction
+```cd ./graph ```
+```python
+python3 leave_one_out.py \
+                                                        -contain_data_similarity ${CONTAIN_DATA_SIMILARITY} \
+                                                        -contain_dataset_feature ${CONTAIN_DATASET_FEATURE} \
+                                                        -embed_dataset_feature ${EMBED_DATASET_FEATURE} \
+                                                        -contain_model_feature ${CONTAIN_MODEL_FEATURE} \
+                                                        -embed_model_feature ${EMBED_MODEL_FEATURE} \
+                                                        -complete_model_features ${complete_model_features} \
+                                                        -accuracy_thres ${ACCU_THRES} \
+                                                        -gnn_method ${GNN_METHOD} \
+                                                        -finetune_ratio ${FINETUE_RATIOS} \
+                                                        -hidden_channels ${hidden_channels} \
+                                                        -test_dataset ${dataset}
+```
 
 ## Graph Neural Network Learning
 

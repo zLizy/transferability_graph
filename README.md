@@ -61,7 +61,7 @@ The features of the datasets are stored under foler: `heterogeneous_graph/datase
 - Attribution Map
 Path of the script: `model_embed/attribution_map/embed_offline.py'
 
-The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `cifar10/aaraki_vit-base-patch16-224-in21k-finetuned-cifar10_input_x_gradient.npy` 
+The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `[dataset_name]/[model_name]_[attribution map method].npy` 
 
 ## Graph Construction
 ```cd ./graph ```

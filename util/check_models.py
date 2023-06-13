@@ -1,5 +1,6 @@
 import os
 import torch
+import json
 import pandas as pd
 from datasets import get_dataset_config_names
 from datasets import load_dataset
@@ -8,7 +9,6 @@ from transformers import AutoConfig
 from transformers import AutoModel,AutoTokenizer
 
 
-# label2dataset = {v:k for k,v in dataset2label.items()}
 
 df = pd.read_csv('../doc/ftrecords.csv',index_col=0)
 df = df[df['framework']=='HuggingFaceText']
@@ -25,7 +25,7 @@ else:
    df_new = pd.DataFrame(columns=[
                 'model','input_shape','output_shape','architectures',
                 'task','dataset','#labels','labels','task_specific_params',
-                'problem_type','finetuning_task'])
+                'problem_type','finetuning_task','label'])
 
 #Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(model_output, attention_mask):
@@ -33,63 +33,119 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+with open('../util/en_classnames.json') as f:
+    dataset2label = json.load(f)
+label2dataset = {str(v):k for k,v in dataset2label.items()}
+if os.path.exists(file):
+    for i,row in df_new.iterrows():
+        print('-----------')
+        print(f"i, model_name: {i}, {row['model']}")
+        labels = row['labels'].lower()
+        print(f'labels: {labels}')
+        dataset = ''
+        if labels == "['label_0', 'label_1']":
+            if 'sentiment' in row['model'] or 'imdb' in row['model']:
+                # print(f'found {dataset}')
+                dataset = 'imdb'
+            elif 'cola' in row['model'].lower(): # or 'cola' in row['finetuning_task']:
+                dataset = 'glue_cola'
+            elif 'amazon_reviews_multi' in row['model']:
+                dataset = 'amazon_reviews_multi'
+            elif 'sst' in row['model'].lower(): # or 'sst' in row['finetuning_task']:
+                dataset = 'glue_sst2'
+            elif 'covid' in row['model']:
+                dataset = 'covid-19_tweets'
+            elif 'qnli' in row['model']:
+                dataset = 'glue_qnli'
+            elif ('bert' in row['model'].lower() and '/' not in row['model']) \
+                or 'LinkBERT-base' in row['model'] or row['model'].endswith('bertweet-base'):
+                dataset = 'wikipedia+bookcorpus'
+        # elif labels == '["label_0", "label_1", "label_2"]':
+        #     if 'Jeevesh8' in row['model'] and 'bert_ft' in row['model']:
+        #         dataset = 'multi_nli'
+        elif 'mnli' in row['model']:
+            dataset = 'multi_nli'
+        elif 'imdb' in row['model']:
+            dataset = 'imdb'
+        
 
-for model_name in models:
-    if model_name in list(df_new['model'].values): 
-        continue
-    else:
-        print(f'======== model: {model_name}')
-
-    try:
-        config = AutoConfig.from_pretrained(model_name)
-    except Exception as e:
-        print(e)
-        continue
-
-    df_tmp = pd.DataFrame(columns=[
-                'model','input_shape','output_shape','architectures',
-                'task','dataset','#labels','labels','task_specific_params',
-                'problem_type','finetuning_task'])
-
-    df_tmp['architectures'] = config.architectures
-    df_tmp['finetuning_task'] = config.finetuning_task
-    df_tmp['#labels'] = config.num_labels
-    df_tmp['labels'] = str(list(config.id2label.values()))
-    df_tmp['task_specific_params'] = config.task_specific_params
-    df_tmp['problem_type'] = config.problem_type
-    df_tmp['model'] = model_name
-    # df_tmp['input_shape'] = ''
-    # df_tmp['task'] = ''
-    # df_tmp['dataset'] = ''
-    print(df_tmp)
-
-    try:
-        model = AutoModel.from_pretrained(model_name)
-    except:
-        model = AutoModel.from_pretrained(model_name,trust_remote_code=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    inputs = tokenizer("I love AutoNLP", return_tensors="pt")
-    print(f'== inputs.keys: {inputs.keys()}')
-
-    try:
-        outputs = model(**inputs)
-    except:
-        continue
+        elif labels in str(label2dataset.keys()):
+            dataset = label2dataset[labels]
+            if dataset == 'emotion_': dataset = 'emotion'
+            print(f'found {dataset}')
+            df_new.loc[i,'dataset'] = dataset
+            df_new.loc[i,'label'] = dataset
+            # df.to_csv(file,index=False)
+        # elif labels in keywords:
+        #     print(f'found {labels} -- huggingface pics')
+        #     df_new.loc[i,'dataset'] = 'hfpics'
+        else:
+            df_new.loc[i,'label'] = row['dataset']
+        df_new.loc[i,'dataset'] = dataset
+        df_new.loc[i,'label'] = dataset
+        
+    df_new[df_new['dataset']==''].to_csv('../doc/text_model_config_null_dataset.csv')
+    df_new[df_new['dataset']!=''].to_csv('../doc/text_model_config_dataset.csv')
     
-    # Perform pooling. In this case, mean pooling.
-    try:
-        _embeddings = mean_pooling(outputs, inputs['attention_mask'])
-        print(_embeddings.shape)
-        df_tmp['output_shape'] = _embeddings.shape[1]
-    except Exception as e:
-        print(e)
-        print('no attention_mask in inputs')
-        continue
+elif not os.path.exists(file):
+    for model_name in models:
+        if model_name in list(df_new['model'].values): 
+            continue
+        else:
+            print(f'======== model: {model_name}')
+
+        try:
+            config = AutoConfig.from_pretrained(model_name)
+        except Exception as e:
+            print(e)
+            continue
+
+        df_tmp = pd.DataFrame(columns=[
+                    'model','input_shape','output_shape','architectures',
+                    'task','dataset','#labels','labels','task_specific_params',
+                    'problem_type','finetuning_task'])
+
+        df_tmp['architectures'] = config.architectures
+        df_tmp['finetuning_task'] = config.finetuning_task
+        df_tmp['#labels'] = config.num_labels
+        df_tmp['labels'] = str(list(config.id2label.values()))
+        df_tmp['task_specific_params'] = config.task_specific_params
+        df_tmp['problem_type'] = config.problem_type
+        df_tmp['model'] = model_name
+        # df_tmp['input_shape'] = ''
+        # df_tmp['task'] = ''
+        # df_tmp['dataset'] = ''
+        print(df_tmp)
+
+        try:
+            model = AutoModel.from_pretrained(model_name)
+        except:
+            model = AutoModel.from_pretrained(model_name,trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        inputs = tokenizer("I love AutoNLP", return_tensors="pt")
+        print(f'== inputs.keys: {inputs.keys()}')
+
+        try:
+            outputs = model(**inputs)
+        except:
+            continue
+        
+        # Perform pooling. In this case, mean pooling.
+        try:
+            _embeddings = mean_pooling(outputs, inputs['attention_mask'])
+            print(_embeddings.shape)
+            df_tmp['output_shape'] = _embeddings.shape[1]
+        except Exception as e:
+            print(e)
+            print('no attention_mask in inputs')
+            continue
+        
+        df_new = pd.concat([df_new,df_tmp],ignore_index=True)
+        print(df_new)
+        df_new.to_csv(file)
+
     
-    df_new = pd.concat([df_new,df_tmp],ignore_index=True)
-    print(df_new)
-    df_new.to_csv(file)
 
 ############## check visual models
 # hg_file = '../doc/hgpics_keyword.csv'

@@ -107,6 +107,7 @@ class Graph():
                 ):
 
         max_model_id = int(torch.max(edge_index_model_to_dataset[0,:]).item()) + 1
+        # rename dataset index name
         edge_index_model_to_dataset[1,:] += max_model_id
         edge_index_dataset_to_dataset += max_model_id
         edge_index = torch.cat((edge_index_model_to_dataset, edge_index_dataset_to_dataset), 1)

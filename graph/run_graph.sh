@@ -33,7 +33,7 @@ do
                                     for ACCU_THRES in 0.7 0.85 0.9;
                                     do 
                                         echo ACCU_THRES-$ACCU_THRES
-                                        for GNN_METHOD in '""'; #HGTConv; #GATConv; # #; #SAGEConv;  #; #;
+                                        for GNN_METHOD in  node2vec; #HGTConv; #GATConv; #'""'; #; #SAGEConv;  #; #;
                                         do
                                             echo GNN_METHOD-$GNN_METHOD
                                             for hidden_channels in 1280; #'""'; #HGTConv; #SAGEConv;  #; #;

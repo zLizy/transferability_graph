@@ -146,9 +146,14 @@ def gnn_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size):
     dir_path = os.path.join('./rank',f'{args.test_dataset}',args.dataset_emb_method, args.gnn_method)
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
-    unique_model_id['score'] = normalized_pred.tolist()
+    
+    results = pd.DataFrame(data['model'].node_id.numpy().tolist(),columns=['mappedID'])
+    results['score'] = normalized_pred.tolist()
+    results = pd.merge(results,unique_model_id,how='left',on='mappedID')
+    # unique_model_id['score'] = normalized_pred.tolist()
     # np.save(os.path.join(dir_path,config_name+'.npy'),pred)
-    unique_model_id.to_csv(os.path.join(dir_path,config_name+'.csv'))
+    # unique_model_id.to_csv(os.path.join(dir_path,config_name+'.csv'))
+    results.to_csv(os.path.join(dir_path,config_name+'.csv'))
 
      
     df_perf = pd.concat([df_perf,pd.DataFrame(evaluation_dict,index=[0])],ignore_index=True)

@@ -329,8 +329,10 @@ def preprocess(args):
     ##########
     if args.test_dataset != '':
         dataset_idx = unique_dataset_id[unique_dataset_id['dataset']==args.test_dataset]['mappedID'].values[0]
+        model_idx = unique_model_id['mappedID'].values
     else:
         dataset_idx = -1
+        model_idx = -1
 
     # get edge index
     edge_index_model_to_dataset = get_edge_index(df,unique_model_id,unique_dataset_id,args.accuracy_thres,args.finetune_ratio)
@@ -349,7 +351,9 @@ def preprocess(args):
                 'edge_index_model_to_dataset':edge_index_model_to_dataset,
                 'edge_attr_model_to_dataset':edge_attr_model_to_dataset,
                 'edge_index_dataset_to_dataset':edge_index_dataset_to_dataset,
-                'dataset_idx': dataset_idx
+                'dataset_idx': dataset_idx,
+                'model_idx':model_idx,
+                'max_model_idx': unique_model_id['mappedID'].max()
             }
 
 def str2bool(v):
@@ -436,16 +440,16 @@ def main(args):
     data_dict = preprocess(args)
     batch_size = 4
 
-    if args.gnn_method != '""':
-        from train_with_GNN import gnn_train
-        gnn_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
+    if args.gnn_method == 'node2vec':
+        from utils.get_node2vec_features import node2vec_train
+        node2vec_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
     elif args.gnn_method == '""':
         from utils.basic import get_basic_features
         get_basic_features(args.test_dataset,data_dict,setting_dict)
-    elif args.gnn_method == 'node2vec':
-        from utils.get_node2vec_features import node2vec_train
-        node2vec_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
-
+    elif args.gnn_method != '""':
+        from train_with_GNN import gnn_train
+        gnn_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
+    
     # model_scripted = torch.jit.script(model) # Export to TorchScript
     # model_scripted.save(os.path.join('./','models','_'.join([ for k,v in evaluation_dict.items()]) +'.pt')) # Save
 
@@ -483,8 +487,9 @@ if __name__ == '__main__':
     args.embed_model_feature = str2bool(args.embed_model_feature)
     args.embed_dataset_feature = str2bool(args.embed_dataset_feature)
     args.complete_model_features = str2bool(args.complete_model_features)
-    # set dataset_emb_method
+
     args.dataset_emb_method  = 'task2vec'
+    # args.gnn_method = 'node2vec'
 
     main(args)
     

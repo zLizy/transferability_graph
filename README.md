@@ -26,6 +26,12 @@ def mnist(root):
 ```
 ### Dataset name mapping
 - If dataset names start with **tweet_eval** or **glue**, it is a subset of either **tweet_eval** or **glue**
+```json
+{"tweet_eval_sentiment":[
+        "negative", "neutral", "positive"
+    ]}
+```
+For example, `tweet_eval_sentiment' is the subset, `sentiment', within the larget dataset collection, `tweet_eval'
 
 ### Data Sources
 - [torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)

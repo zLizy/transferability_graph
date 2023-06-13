@@ -24,6 +24,11 @@ def mnist(root):
     testset = MNIST(root, train=False, transform=transform)
     return trainset, testset
 ```
+
+For HuggingFace datasets:
+```python
+train_dataset = load_dataset('beans', split='train')
+```
 ### Dataset name mapping
 - If dataset names start with **tweet_eval** or **glue**, it is a subset of either **tweet_eval** or **glue**
 ```json

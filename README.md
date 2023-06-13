@@ -24,6 +24,8 @@ def mnist(root):
     testset = MNIST(root, train=False, transform=transform)
     return trainset, testset
 ```
+### Dataset name mapping
+- If dataset names start with **tweet_eval** or **glue**, it is a subset of either **tweet_eval** or **glue**
 
 ### Data Sources
 - [torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)

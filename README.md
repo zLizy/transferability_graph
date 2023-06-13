@@ -31,7 +31,7 @@ def mnist(root):
         "negative", "neutral", "positive"
     ]}
 ```
-For example, 'tweet_eval_sentiment' is the subset, `sentiment', within the larget dataset collection, `tweet_eval'
+For example, `tweet_eval_sentiment` is the subset, `sentiment`, within the larget dataset collection, `tweet_eval`
 
 ### Data Sources
 - [torchvision.datasets](https://pytorch.org/vision/stable/datasets.html)

@@ -72,6 +72,7 @@ The features of the datasets are stored under foler: `heterogeneous_graph/datase
 
 ## Model Embeddings
 - Attribution Map
+
 Path of the script: `model_embed/attribution_map/embed_offline.py'
 
 The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `[dataset_name]/[model_name]_[attribution map method].npy` 

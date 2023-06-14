@@ -31,12 +31,21 @@ model = ResNetModel.from_pretrained("microsoft/resnet-50").to(device)
 # model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
 
 ## model_dataset mapping
-df = pd.read_csv('../../doc/model_config_dataset.csv')
+## visual datasets
+# df = pd.read_csv('../../doc/model_config_dataset.csv')
+## textual datasets
+df = pd.read_csv('../../doc/text_model_config_dataset.csv')
 
 ## Load datasets
-datasets_list = [   
-                    'poolrf2001/FaceMask','FastJobs/Visual_Emotional_Analysis'
-    
+datasets_list = [   'glue/cola','glue/sst2','glue/wnli','glue/rte',
+                    'multi_nli', 'sundanese-twitter', 'trec', 'emotion',
+                    'tweet_eval/emoji', 'tweet_eval/offensive', 'tweet_eval/emotion',
+                    'pasinit/scotus','crcb/autotrain-data-isear_bert', 'toxicity',
+                    'hate_speech_offensive','rotten_tomatoes', 'tweet_eval/hate',
+                    'tweet_eval/sentiment','ag_news','dbpedia_14','amazon_polarity',
+                    'tweet_eval/irony','glue/qnli','covid-19_tweets','glue/qqp',
+                    'imdb','wikipedia','bookcorpus'
+                    # 'poolrf2001/FaceMask','FastJobs/Visual_Emotional_Analysis'
                     # 'food101','cifar10','cifar100','caltech101',
                     # 'stanfordcars','eurosat','clevr_count_all','clevr_closest_object_distance',
                     # 'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',

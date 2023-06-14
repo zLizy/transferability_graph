@@ -1698,14 +1698,14 @@
         "severe diabetic retinopathy",
         "proliferative diabetic retinopathy"
     ],
-    "glue_cola":[
+    "glue/cola":[
         "unacceptable", 
         "acceptable"
     ],
-    "tweet_eval_sentiment":[
+    "tweet_eval/sentiment":[
         "negative", "neutral", "positive"
     ],
-    "glue_sst2":[
+    "glue/sst2":[
         "negative", "positive"
     ],
     "emotion":[
@@ -1717,13 +1717,13 @@
     "toxicity":[
         "toxic", "not_toxic"
     ],
-    "tweet_eval_emotion":[
+    "tweet_eval/emotion":[
         "anger", "joy", "optimism", "sadness"
     ],
-    "tweet_eval_emoji":[
+    "tweet_eval/emoji":[
         "label_0", "label_1", "label_2", "label_3", "label_4", "label_5", "label_6", "label_7", "label_8", "label_9", "label_10", "label_11", "label_12", "label_13", "label_14", "label_15", "label_16", "label_17", "label_18", "label_19"
     ],
-    "tweet_eval_offensive":[
+    "tweet_eval/offensive":[
         "non-offensive", "offensive"
     ],
     "hate_speech_offensive":[
@@ -1735,19 +1735,16 @@
     "multi_nli":[
         "entailment", "neutral", "contradiction"
     ],
-    "amazon_reviews_multi":[
-
-    ],
-    "glue_wnli":[
+    "glue/wnli":[
         "not_entailment", "entailment"
     ],
-    "scotus":[
+    "pasinit/scotus":[
         "label_0", "label_1", "label_2", "label_3", "label_4", "label_5", "label_6", "label_7", "label_8", "label_9", "label_10", "label_11", "label_12", "label_13"
     ],
     "sundanese-twitter":[
         "anger","joy","fear","sadness"
     ],
-    "glue_rte":[
+    "glue/rte":[
         "entailment", "not_entailment"
     ],
     "crcb/autotrain-data-isear_bert":[

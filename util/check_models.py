@@ -47,16 +47,18 @@ if os.path.exists(file):
             if 'sentiment' in row['model'] or 'imdb' in row['model']:
                 # print(f'found {dataset}')
                 dataset = 'imdb'
+            elif 'qqp' in row['model']:
+                dataset = 'glue/qqp'
             elif 'cola' in row['model'].lower(): # or 'cola' in row['finetuning_task']:
-                dataset = 'glue_cola'
-            elif 'amazon_reviews_multi' in row['model']:
-                dataset = 'amazon_reviews_multi'
+                dataset = 'glue/cola'
+            # elif 'amazon_reviews_multi' in row['model']:
+            #     dataset = 'amazon_reviews_multi'
             elif 'sst' in row['model'].lower(): # or 'sst' in row['finetuning_task']:
-                dataset = 'glue_sst2'
+                dataset = 'glue/sst2'
             elif 'covid' in row['model']:
                 dataset = 'covid-19_tweets'
             elif 'qnli' in row['model']:
-                dataset = 'glue_qnli'
+                dataset = 'glue/qnli'
             elif ('bert' in row['model'].lower() and '/' not in row['model']) \
                 or 'LinkBERT-base' in row['model'] or row['model'].endswith('bertweet-base'):
                 dataset = 'wikipedia+bookcorpus'
@@ -67,8 +69,6 @@ if os.path.exists(file):
             dataset = 'multi_nli'
         elif 'imdb' in row['model']:
             dataset = 'imdb'
-        
-
         elif labels in str(label2dataset.keys()):
             dataset = label2dataset[labels]
             if dataset == 'emotion_': dataset = 'emotion'
@@ -79,6 +79,8 @@ if os.path.exists(file):
         # elif labels in keywords:
         #     print(f'found {labels} -- huggingface pics')
         #     df_new.loc[i,'dataset'] = 'hfpics'
+        elif 'sundanese' in row['model'].lower():
+            dataset = 'sundanese-twitter'
         else:
             df_new.loc[i,'label'] = row['dataset']
         df_new.loc[i,'dataset'] = dataset

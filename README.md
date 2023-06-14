@@ -50,7 +50,7 @@ For example, `tweet_eval_sentiment` is the subset, `sentiment`, within the large
 
 - [huggingface](https://huggingface.co/datasets?task_categories=task_categories:image-classification&sort=downloads)
     + `glue/cola`, `glue/sst2`, `glue/wnli`, `glue/qnli`,`glue/qqp`, `glue/rte`, `tweet_eval/emoji`, `tweet_eval/offensive`, `tweet_eval/emotion`, `tweet_eval/sentiment`, `tweet_eval/irony`,`multi_nli`, `sundanese-twitter`, `trec`, `emotion`, `pasinit/scotus`, `crcb/autotrain-data-isear_bert`, `hate_speech_offensive`, `rotten_tomatoes`, `tweet_eval/hate`,  `ag_news`, `dbpedia_14`, `amazon_polarity`, `imdb`, `wikipedia`, `bookcorpus`
-- [External source]
+- **External source**
     + [`toxicity`](https://www.kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge/data)
     + [`covid-19_tweets`](https://www.kaggle.com/datasets/kaushiksuresh147/covidvaccine-tweets)
 

@@ -76,7 +76,7 @@ Path of the script: `model_embed/attribution_map/embed_offline.py'
 
 The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `[dataset_name]/[model_name]_[attribution map method].npy` 
 
-## Graph Construction
+## Graph Construction & Link Prediction
 ```shell
 cd ./graph
 python3 leave_one_out.py \
@@ -93,7 +93,4 @@ python3 leave_one_out.py \
         -test_dataset ${dataset}
 ```
 
-## Graph Neural Network Learning
-
-## Link Prediction
 

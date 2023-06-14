@@ -57,13 +57,13 @@ For example, `tweet_eval_sentiment` is the subset, `sentiment`, within the large
 
 ## Dataset Embeddings
 To get dataset embeddings, two ways are implemented:
-- Task2VEC
+### Task2VEC
 
 `./dataset_embed/task2vec_embed/embed_task.py`
 
 The features of the datasets are stored under foler: `heterogeneous_graph/dataset_embed/task2vec_embed/feature/` with name as `[dataset_name]_feature.p`, e.g., `caltech101_feature.p`.
 
-- Domain Similarity
+### Domain Similarity
 
 `./dataset_embed/domain_similarity/embed_offline.py`
 
@@ -71,7 +71,7 @@ The features of the datasets are stored under foler: `heterogeneous_graph/datase
 
 
 ## Model Embeddings
-- Attribution Map
+### Attribution Map
 
 Path of the script: `model_embed/attribution_map/embed_offline.py'
 

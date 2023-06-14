@@ -76,20 +76,20 @@ Path of the script: `model_embed/attribution_map/embed_offline.py'
 The features of the models are stored under folder: `heterogeneous_graph/model_embed/attribution_map/feature/`, e.g., `[dataset_name]/[model_name]_[attribution map method].npy` 
 
 ## Graph Construction
-```cd ./graph ```
-```python
+```shell
+cd ./graph
 python3 leave_one_out.py \
-                                                        -contain_data_similarity ${CONTAIN_DATA_SIMILARITY} \
-                                                        -contain_dataset_feature ${CONTAIN_DATASET_FEATURE} \
-                                                        -embed_dataset_feature ${EMBED_DATASET_FEATURE} \
-                                                        -contain_model_feature ${CONTAIN_MODEL_FEATURE} \
-                                                        -embed_model_feature ${EMBED_MODEL_FEATURE} \
-                                                        -complete_model_features ${complete_model_features} \
-                                                        -accuracy_thres ${ACCU_THRES} \
-                                                        -gnn_method ${GNN_METHOD} \
-                                                        -finetune_ratio ${FINETUE_RATIOS} \
-                                                        -hidden_channels ${hidden_channels} \
-                                                        -test_dataset ${dataset}
+        -contain_data_similarity ${CONTAIN_DATA_SIMILARITY} \
+        -contain_dataset_feature ${CONTAIN_DATASET_FEATURE} \
+        -embed_dataset_feature ${EMBED_DATASET_FEATURE} \
+        -contain_model_feature ${CONTAIN_MODEL_FEATURE} \
+        -embed_model_feature ${EMBED_MODEL_FEATURE} \
+        -complete_model_features ${complete_model_features} \
+        -accuracy_thres ${ACCU_THRES} \
+        -gnn_method ${GNN_METHOD} \
+        -finetune_ratio ${FINETUE_RATIOS} \
+        -hidden_channels ${hidden_channels} \
+        -test_dataset ${dataset}
 ```
 
 ## Graph Neural Network Learning

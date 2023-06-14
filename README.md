@@ -31,7 +31,7 @@ train_dataset = load_dataset('beans', split='train') # name of the dataset
 ```
 ### Check the dataset loading
 ```python
-# change the list of the dataset names
+# change the list of the dataset names in './dataset_embed/domain_similarity/embed_offline.py'
 ## Load datasets
 datasets_list = ['glue_wnli',...]
 ```

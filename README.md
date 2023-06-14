@@ -29,6 +29,13 @@ For HuggingFace datasets:
 ```python
 train_dataset = load_dataset('beans', split='train') # name of the dataset
 ```
+### Check the dataset loading
+```python
+# change the list of the dataset names
+## Load datasets
+datasets_list = ['glue_wnli',...]
+```
+
 ### Dataset name mapping
 - If dataset names start with **tweet_eval** or **glue**, it is a subset of either **tweet_eval** or **glue**
 ```json
@@ -56,6 +63,7 @@ The features of the datasets are stored under foler: `heterogeneous_graph/datase
 `./dataset_embed/domain_similarity/embed_offline.py`
 
 The features of the datasets are stored under foler: `heterogeneous_graph/dataset_embed/domain_similarity/feature/resnet50/` with name as `[dataset_name]_feature.npy`, e.g., `caltech101_feature.npy`.
+
 
 ## Model Embeddings
 - Attribution Map

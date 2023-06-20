@@ -844,15 +844,11 @@ def fastjobs_visual_emotional_analysis(root,input_shape=224):
 
 @_add_dataset
 def chest_xray_classification(root,input_shape=224):
-    dataset = GransferHuggingFaceImageDataset.load('keremberke/chest-xray-classification')
-
-    return dataset.train_set, dataset.test_set, 'hfds'
+    return GransferHuggingFaceImageDataset.load('keremberke/chest-xray-classification')
 
 @_add_dataset
 def trec(root, input_shape=224):
-    dataset = GransferHuggingFaceTextDataset.load('trec')
-
-    return dataset.train_set, dataset.test_set, 'hfds'
+    return GransferHuggingFaceTextDataset.load('trec')
 
 
 def hftxtds2tvds(ds: HuggingFaceDataset):

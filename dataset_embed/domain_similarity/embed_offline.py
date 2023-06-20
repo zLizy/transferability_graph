@@ -1,4 +1,4 @@
-from transformers import AutoImageProcessor, ResNetModel,ConvNextModel
+from transformers import AutoImageProcessor, ResNetModel, ConvNextModel, DistilBertForSequenceClassification
 from torch.utils.data import DataLoader
 from torch.utils import data
 from torchvision import transforms
@@ -20,40 +20,24 @@ from util import dataset
 from util.tfds import VTABIterableDataset
 
 MAX_NUM_SAMPLES = 5000
-FEATURE_DIM = 2048
+FEATURE_DIM = 2
 GET_FEATURE = True
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ### Check output dimension -> it should be 2048
 model_name = 'resnet50'
 # model = torchvision.models.resnet50(weights="DEFAULT")
-model = ResNetModel.from_pretrained("microsoft/resnet-50").to(device)
+model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased")
 # model = ConvNextModel.from_pretrained("facebook/convnext-base-224-22k").to('cuda')
 
 ## model_dataset mapping
 ## visual datasets
 # df = pd.read_csv('../../doc/model_config_dataset.csv')
 ## textual datasets
-df = pd.read_csv('../../doc/text_model_config_dataset.csv')
+# df = pd.read_csv('../../doc/text_model_config_dataset.csv')
 
 ## Load datasets
-datasets_list = [   'glue/cola','glue/sst2','glue/wnli','glue/rte',
-                    'multi_nli', 'sundanese-twitter', 'trec', 'emotion',
-                    'tweet_eval/emoji', 'tweet_eval/offensive', 'tweet_eval/emotion',
-                    'pasinit/scotus','crcb/autotrain-data-isear_bert', 'toxicity',
-                    'hate_speech_offensive','rotten_tomatoes', 'tweet_eval/hate',
-                    'tweet_eval/sentiment','ag_news','dbpedia_14','amazon_polarity',
-                    'tweet_eval/irony','glue/qnli','covid-19_tweets','glue/qqp',
-                    'imdb','wikipedia','bookcorpus'
-                    # 'poolrf2001/FaceMask','FastJobs/Visual_Emotional_Analysis'
-                    # 'food101','cifar10','cifar100','caltech101',
-                    # 'stanfordcars','eurosat','clevr_count_all','clevr_closest_object_distance',
-                    # 'dmlab', 'kitti_closest_vehicle_distance','flowers','pets',
-                    # 'pcam','sun397','smallnorb_label_azimuth','smallnorb_label_elevation',
-                    # 'svhn','resisc45','diabetic_retinopathy',
-                    # 'cats_vs_dogs','beans','keremberke/pokemon-classification',
-                    # 'Matthijs/snacks','chest_xray_classification','FastJobs/Visual_Emotional_Analysis',
-                ]
+datasets_list = [   "trec"]
 
 for dataset_name in datasets_list[:]:
     dataset_name = dataset_name.replace('/','_').replace('-','_')
@@ -85,18 +69,18 @@ for dataset_name in datasets_list[:]:
     labels_tensor = torch.zeros(1,).to(device)
 
     ## Load dataset
-    print_flag = True
+    print_flag = False
     # randomly sample MAX_NUM_SAMPLES
     idx = random.sample(range(length), k=LEN)
     ds = torch.utils.data.Subset(ds, idx)
     
     dataloader = DataLoader(
                     ds,
-                    batch_size=64, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
+                    batch_size=1, # may need to reduce this depending on your GPU
+                    num_workers=0, # may need to reduce this depending on your num of CPUs and RAM
                     shuffle=False,
                     drop_last=False,
-                    pin_memory=True
+                    pin_memory=True,
                 )
     print(f'dataloader size: {len(dataloader)}')
     with torch.no_grad():
@@ -111,8 +95,8 @@ for dataset_name in datasets_list[:]:
                     print('-----------')
                     print_flag = False
                 
-                feature = torch.reshape(output.pooler_output,(len(y),FEATURE_DIM))
-                features_tensor = torch.cat((features_tensor,feature),0)
+              #  feature = torch.reshape(output.logits,(len(y),FEATURE_DIM))
+                features_tensor = torch.cat((features_tensor,output.logits),0)
             labels_tensor = torch.cat((labels_tensor,y.to(device)),0)
 
     

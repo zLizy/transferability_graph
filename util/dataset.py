@@ -18,10 +18,14 @@ import os
 import json
 import numpy as np
 import torch
+from torch import tensor
+from transformers import DistilBertTokenizer
 
+from util.common import GransferHuggingFaceTextDataset, GransferHuggingFaceImageDataset
 from util.tfds import VTABIterableDataset
 from torch.utils.data import DataLoader
 from datasets import load_dataset
+from datasets import Dataset as HuggingFaceDataset
 
 
 try:
@@ -840,14 +844,22 @@ def fastjobs_visual_emotional_analysis(root,input_shape=224):
 
 @_add_dataset
 def chest_xray_classification(root,input_shape=224):
-    train_dataset = load_dataset('keremberke/chest-xray-classification', name='full')['train']
-    # train_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
-    train_dataset = hfds2tvds(train_dataset,input_shape)
-    # test_dataset = load_dataset('keremberke/chest-xray-classification', name='full')['test']
-    # train_dataset = hfds2tvds(train_dataset,input_shape)
-    # test_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
-    return train_dataset, '','hfds'
+    return GransferHuggingFaceImageDataset.load('keremberke/chest-xray-classification')
 
+@_add_dataset
+def trec(root, input_shape=224):
+    return GransferHuggingFaceTextDataset.load('trec')
+
+
+def hftxtds2tvds(ds: HuggingFaceDataset):
+    print(ds.features)
+    tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
+    text = tokenizer(ds["text"], return_tensors="pt", padding=True)["input_ids"]
+    labels = ds["coarse_label"]
+    from torch.utils.data import TensorDataset
+    ds = TensorDataset(text, tensor(labels))
+
+    return ds
 
 def get_dataset(root,dataset_name,input_shape=224,splits=[''],return_classes=False):
     if ']' in dataset_name:

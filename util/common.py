@@ -1,14 +1,15 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Optional, Union, Sequence
+from typing import Optional
 
 import numpy as np
-from datasets import load_dataset, Dataset as HuggingFaceDataset
 import torch
+from datasets import load_dataset, Dataset as HuggingFaceDataset
+from sentence_transformers import SentenceTransformer
 from torch import tensor, Tensor as TorchTensor
 from torch.utils.data import TensorDataset as TorchTensorDataset
 from torchvision.transforms import transforms
-from transformers import DistilBertTokenizer, ResNetModel, PreTrainedModel, DistilBertForSequenceClassification
+from transformers import ResNetModel, PreTrainedModel
 
 
 # ----------------- TRANSFORMING FUNCTIONS (should be moved to separate location at some point) -----------------
@@ -16,8 +17,8 @@ def transform_hugging_face_text_to_torch_dataset(
         dataset_huggingface: HuggingFaceDataset
 ) -> TorchTensorDataset:
     print(dataset_huggingface.features)
-    tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
-    text = tokenizer(dataset_huggingface["text"], return_tensors="pt", padding=True)["input_ids"]
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    text = model.encode(dataset_huggingface["text"], convert_to_tensor=True)
     labels = dataset_huggingface["coarse_label"]
     dataset_torch = TorchTensorDataset(text, tensor(labels))
 
@@ -58,11 +59,10 @@ def transform_hugging_face_image_to_torch_dataset(
 
 
 class GransferModel:
-    def __init__(self, identifier: str, device: str, feature_dimension: int, model: PreTrainedModel) -> None:
+    def __init__(self, identifier: str, device: str, feature_dimension: int) -> None:
         self.identifier = identifier
         self.device = device
         self.feature_dimension = feature_dimension
-        self.model = model
 
     @staticmethod
     @abstractmethod
@@ -75,20 +75,27 @@ class GransferModel:
 
 
 class GransferTextModel(GransferModel):
+    def __init__(self, identifier: str, device: str, feature_dimension: int, model: SentenceTransformer) -> None:
+        super().__init__(identifier, device, feature_dimension)
+        self.model = model
+
     @staticmethod
     def load(device: str) -> GransferModel:
         return GransferTextModel(
             "distilbert-base-uncased",
             device,
-            2, # feature_dimension
-            DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased").to(device)
+            384, # feature_dimension
+            SentenceTransformer('all-MiniLM-L6-v2')
         )
 
     def get_features(self, input_tensor: TorchTensor, length: int) -> TorchTensor:
-        return self.model(input_tensor.to(self.device)).logits
-
+        return input_tensor
 
 class GransferImageModel(GransferModel):
+    def __init__(self, identifier: str, device: str, feature_dimension: int, model: PreTrainedModel) -> None:
+        super().__init__(identifier, device, feature_dimension)
+        self.model = model
+
     @staticmethod
     def load(device: str) -> GransferModel:
         return GransferImageModel(

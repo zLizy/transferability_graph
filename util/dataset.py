@@ -11,22 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 
-import random
 import collections
-import torchvision.transforms as transforms
-import os
 import json
+import os
+import random
+
 import numpy as np
 import torch
+import torchvision.transforms as transforms
+from datasets import Dataset as HuggingFaceDataset
+from datasets import load_dataset
+from sentence_transformers import SentenceTransformer
 from torch import tensor
-from transformers import DistilBertTokenizer
+from torch.utils.data import DataLoader
 
 from util.common import GransferHuggingFaceTextDataset, GransferHuggingFaceImageDataset
 from util.tfds import VTABIterableDataset
-from torch.utils.data import DataLoader
-from datasets import load_dataset
-from datasets import Dataset as HuggingFaceDataset
-
 
 try:
     from IPython import embed
@@ -853,8 +853,8 @@ def trec(root, input_shape=224):
 
 def hftxtds2tvds(ds: HuggingFaceDataset):
     print(ds.features)
-    tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
-    text = tokenizer(ds["text"], return_tensors="pt", padding=True)["input_ids"]
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    text = model.encode(ds["text"], convert_to_tensor=True)
     labels = ds["coarse_label"]
     from torch.utils.data import TensorDataset
     ds = TensorDataset(text, tensor(labels))

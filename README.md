@@ -1,3 +1,4 @@
+```shell
 echo 
 echo ====== new command ========
 for CONTAIN_DATASET_FEATURE in True; #  True  False
@@ -76,6 +77,7 @@ do
                     done
                 done
             done
+```
         done
     done
 done

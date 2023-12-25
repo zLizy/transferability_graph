@@ -1,4 +1,4 @@
-from torch_geometric.nn import SAGEConv,GATConv, HGTConv,to_hetero,Linear
+from torch_geometric.nn import SAGEConv,GATConv, GraphConv, GCNConv, HGTConv,to_hetero,Linear, HeteroConv
 import torch.nn.functional as F
 import torch
 from torch import Tensor
@@ -31,18 +31,68 @@ class EebedGNN(torch.nn.Module):
         return x
         # raise NotImplementedError
 
-class GNN(torch.nn.Module):
+class SAGENN(torch.nn.Module):
     def __init__(self, hidden_channels):
         super().__init__()
         self.conv1 = SAGEConv((-1, -1), hidden_channels)
         self.conv2 = SAGEConv((-1,-1), hidden_channels)
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor: #: Tensor
+    def forward(self, x, edge_index) -> Tensor: #: Tensor
         x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
         x = self.conv2(x, edge_index) #+ self.lin2(x)
         return x
+    
+class GraphNN(torch.nn.Module):
+    def __init__(self, hidden_channels):
+        super().__init__()
+        self.conv1 = GraphConv(-1, hidden_channels,add_self_loops=False)
+        self.conv2 = GraphConv(-1, hidden_channels,add_self_loops=False)
 
-class Model(torch.nn.Module):
+    def forward(self, x, edge_index) -> Tensor: #: Tensor
+        x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
+        x = self.conv2(x, edge_index) #+ self.lin2(x)
+        return x
+    
+class HeteroGNN(torch.nn.Module):
+    def __init__(self, hidden_channels, num_layers=2):
+        super().__init__()
+
+        self.convs = torch.nn.ModuleList()
+        for _ in range(num_layers):
+            conv = HeteroConv({
+                ('model', 'trained_on', 'dataset'): GATConv((-1,-1), hidden_channels,add_self_loops=False),
+                ('dataset', 'similar_to', 'dataset'): SAGEConv((-1, -1), hidden_channels,add_self_loops=False),
+                ('dataset', 'rev_trained_on', 'model'): SAGEConv((-1, -1), hidden_channels,add_self_loops=False),
+                ('model', 'transfer_to', 'dataset'): GATConv((-1,-1), hidden_channels,add_self_loops=False),
+            }, aggr='sum')
+            self.convs.append(conv)
+
+        # self.lin = Linear(hidden_channels, hidden_channels)
+
+    def forward(self, x_dict, edge_index_dict):
+        # print(f'\n-- HeteroGNN.x_dict: {x_dict.keys()}')
+        # print(f"\n-- x_dict.model: {x_dict['model'].shape}")
+        # print(f"\n-- x_dict.model: {x_dict['dataset'].shape}")
+        for conv in self.convs:
+            x_dict = conv(x_dict, edge_index_dict)
+            # print(f'\n-- after_convs.x_dict: {x_dict.keys()}')
+            x_dict = {key: x.relu() for key, x in x_dict.items()}
+        # print(x_dict)
+        # return self.lin(x_dict['author'])
+        return x_dict
+
+class GCN(torch.nn.Module):
+    def __init__(self, hidden_channels):
+        super().__init__()
+        self.conv1 = GCNConv(-1, hidden_channels,add_self_loops=False)
+        self.conv2 = GCNConv(-1, hidden_channels,add_self_loops=False)
+
+    def forward(self, x, edge_index) -> Tensor: #: Tensor
+        x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
+        x = self.conv2(x, edge_index) #+ self.lin2(x)
+        return x
+    
+class HeteroModel(torch.nn.Module):
     def __init__(
         self,
         metadata,
@@ -55,6 +105,7 @@ class Model(torch.nn.Module):
         embed_model_feature,
         embed_dataset_feature,
         gnn_method,
+        label_type,
         hidden_channels,
         node_types=None
     ):
@@ -64,6 +115,7 @@ class Model(torch.nn.Module):
         self.embed_model_feature = embed_model_feature
         self.embed_dataset_feature = embed_dataset_feature
         self.gnn_method = gnn_method
+        self.s, self.r, self.t = label_type
 
         # Since the dataset does not come with rich features, we also learn two
         # embedding matrices for users and movies:
@@ -82,18 +134,25 @@ class Model(torch.nn.Module):
         self.dataset_emb = torch.nn.Embedding(num_dataset_nodes, hidden_channels)# data["dataset"].num_nodes
         
         ## Instantiate homogeneous GNN:
-        if self.gnn_method == 'SAGEConv':
-            self.gnn = GNN(hidden_channels)
-        elif self.gnn_method == 'GATConv':
+        print('\nself.gnn_method: {self.gnn_method}')
+        if 'SAGEConv' in self.gnn_method:
+            self.gnn = SAGENN(hidden_channels)
+        elif 'GATConv' in self.gnn_method:
             self.gnn = GAT(hidden_channels)
-        elif self.gnn_method == 'HGTConv':
+        elif 'HGTConv' in self.gnn_method:
             self.gnn = HGT(hidden_channels,node_types,metadata)
+        elif 'GraphConv' in self.gnn_method:
+            self.gnn = GraphNN(hidden_channels)
+        elif 'GCNConv' in self.gnn_method:
+            self.gnn = GCN(hidden_channels)
+        elif 'HeteroGNN' in self.gnn_method:
+            self.gnn = HeteroGNN(hidden_channels)
 
         # Convert GNN model into a heterogeneous variant:
-        if self.gnn_method != 'HGTConv':
+        if ('HGTConv' not in self.gnn_method) and ('HeteroGNN' not in self.gnn_method) and ('homo' not in self.gnn_method):
             self.gnn = to_hetero(self.gnn, metadata=metadata)#,aggr='sum')
 
-        self.classifier = Classifier()
+        self.classifier = HeteroClassifier()
         self.flag = True
 
     def forward(self, data: HeteroData) -> Tensor:
@@ -132,18 +191,88 @@ class Model(torch.nn.Module):
             'dataset': dataset_emb
         } 
         if self.flag:
-            print(f'data["dataset"].x:{data["dataset"].x.shape}')
-            print(f'data["dataset"].node_id:{data["dataset"].node_id.shape}')
+            # print(f'data["dataset"].x:{data["dataset"].x.shape}')
+            # print(f'data["dataset"].node_id:{data["dataset"].node_id.shape}')
+            print('\n============')
+            print(f'data.edge_attr_dict: {data.edge_attr_dict.keys()}')
+            # print(f'data.edge_index_dict: {data.edge_index_dict}')
             self.flag=False
         
         # `x_dict` holds feature matrices of all node types
         # `edge_index_dict` holds all edge indices of all edge types
-        self.x_dict = self.gnn(x_dict,data.edge_index_dict)#(x_dict, data.edge_index_dict)
+        # self.x_dict = self.gnn(x_dict,data.edge_index_dict)#(x_dict, data.edge_index_dict)
+        if self.gnn_method == 'GATConv':
+            contain_attr = True
+            if not contain_attr:
+                data.edge_attr_dict = None
+            self.x_dict = self.gnn(x_dict,data.edge_index_dict,data.edge_attr_dict)#(x_dict, data.edge_index_dict)
+        elif self.gnn_method == 'GraphConv' or self.gnn_method == 'GCNConv':
+            self.x_dict = self.gnn(x_dict,data.edge_index_dict)#(x_dict, data.edge_index_dict)
+        else:
+            self.x_dict = self.gnn(x_dict,data.edge_index_dict)#(x_dict, data.edge_index_dict)
 
         pred = self.classifier(
             self.x_dict["model"],
             self.x_dict["dataset"],
-            data["model", "trained_on", "dataset"].edge_label_index,
+            data[self.s, self.r, self.t].edge_label_index,
+        )
+        return pred
+    
+
+class GCN(torch.nn.Module):
+    def __init__(self, hidden_channels):
+        super().__init__()
+        self.conv1 = GCNConv(-1, hidden_channels,add_self_loops=False)
+        self.conv2 = GCNConv(-1, hidden_channels,add_self_loops=False)
+
+    def forward(self, x, edge_index) -> Tensor: #: Tensor
+        x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
+        x = self.conv2(x, edge_index) #+ self.lin2(x)
+        return x
+    
+class HomoModel(torch.nn.Module):
+    def __init__(
+        self,
+        metadata,
+        gnn_method,
+        hidden_channels,
+        node_types=None
+    ):
+        super().__init__()
+        self.gnn_method = gnn_method
+
+        # Instantiate homogeneous GNN:
+        if 'SAGEConv' in self.gnn_method:
+            self.gnn = SAGENN(hidden_channels)
+        elif 'GATConv' in self.gnn_method:
+            self.gnn = GAT(hidden_channels)
+        elif 'HGTConv' in self.gnn_method:
+            self.gnn = HGT(hidden_channels,node_types,metadata)
+        elif 'GraphConv' in self.gnn_method:
+            self.gnn = GraphNN(hidden_channels)
+        elif 'GCNConv' in self.gnn_method:
+            self.gnn = GCN(hidden_channels)
+        elif 'HeteroGNN' in self.gnn_method:
+            self.gnn = HeteroGNN(hidden_channels)
+
+        self.classifier = HomoClassifier()
+        self.flag = True
+
+    def forward(self, data) -> Tensor:
+
+        if self.gnn_method == 'GATConv':
+            contain_attr = True
+            if not contain_attr:
+                data.edge_attr_dict = None
+            self.x_dict = self.gnn(data.x,data.edge_index,data.edge_attr)#(x_dict, data.edge_index_dict)
+        elif self.gnn_method == 'GraphConv' or self.gnn_method == 'GCNConv':
+            self.x_dict = self.gnn(data.x,data.edge_index)#(x_dict, data.edge_index_dict)
+        else:
+            self.x_dict = self.gnn(data.x,data.edge_index)#(x_dict, data.edge_index_dict)
+
+        pred = self.classifier(
+            self.x_dict,
+            data.edge_label_index,
         )
         return pred
 
@@ -184,21 +313,33 @@ class GAT(torch.nn.Module):
         self.conv2 = GATConv((-1, -1), hidden_channels, add_self_loops=False)
         self.lin2 = Linear(-1, hidden_channels)
 
-    def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index) + self.lin1(x)
+    def forward(self, x, edge_index,edge_attr=None):
+        x = self.conv1(x, edge_index,edge_attr) + self.lin1(x)
         x = x.relu()
-        x = self.conv2(x, edge_index) + self.lin2(x)
+        x = self.conv2(x, edge_index,edge_attr) + self.lin2(x)
         return x
 
 # Our final classifier applies the dot-product between source and destination
 # node embeddings to derive edge-level predictions:
-class Classifier(torch.nn.Module):
+class HeteroClassifier(torch.nn.Module):
     def forward(self, x_model: Tensor, x_dataset: Tensor, edge_label_index: Tensor) -> Tensor:
         # Convert node embeddings to edge-level representations:
         edge_feat_model = x_model[edge_label_index[0]]
         edge_feat_dataset= x_dataset[edge_label_index[1]]
 
         # Apply dot-product to get a prediction per supervision edge:
+        # return (edge_feat_model * edge_feat_dataset).sum(dim=-1)
+        return torch.sigmoid((edge_feat_model * edge_feat_dataset).sum(dim=-1))
+
+
+class HomoClassifier(torch.nn.Module):
+    def forward(self, x, edge_label_index: Tensor) -> Tensor:
+        # Convert node embeddings to edge-level representations:
+        edge_feat_model = x[edge_label_index[0]]
+        edge_feat_dataset= x[edge_label_index[1]]
+
+        # Apply dot-product to get a prediction per supervision edge:
         return (edge_feat_model * edge_feat_dataset).sum(dim=-1)
+        # return torch.sigmoid((edge_feat_model * edge_feat_dataset).sum(dim=-1))
 
 

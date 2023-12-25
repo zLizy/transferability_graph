@@ -1,9 +1,14 @@
 import warnings
 from copy import copy
-from typing import List, Optional, Union
+from typing import List, Tuple, Optional, Union
+import random
 
+import numpy as np
 import torch
 from torch import Tensor
+
+from torch_geometric.utils import coalesce, degree, remove_self_loops
+from torch_geometric.utils.num_nodes import maybe_num_nodes
 
 from torch_geometric.data import Data, HeteroData
 from torch_geometric.data.datapipes import functional_transform
@@ -18,8 +23,11 @@ def sample(population: int, k: int, device=None) -> Tensor:
     else:
         return torch.tensor(random.sample(range(population), k), device=device)
 
+def negative_sampling(negative_edge_index,num_neg_samples):
+    neg_pairs = negative_edge_index[np.random.choice(negative_edge_index.size()[0],num_neg_samples)]
+    return torch.t(neg_pairs)
 
-def negative_sampling(edge_index: Tensor,
+def negative_sampling_ori(edge_index: Tensor,
                       num_nodes: Optional[Union[int, Tuple[int, int]]] = None,
                       num_neg_samples: Optional[int] = None,
                       method: str = "sparse",
@@ -116,7 +124,69 @@ def negative_sampling(edge_index: Tensor,
 
     return vector_to_edge_index(neg_idx, size, bipartite, force_undirected)
 
-@functional_transform('random_link_split')
+def edge_index_to_vector(
+    edge_index: Tensor,
+    size: Tuple[int, int],
+    bipartite: bool,
+    force_undirected: bool = False,
+) -> Tuple[Tensor, int]:
+    row, col = edge_index
+    if bipartite:  # No need to account for self-loops.
+        idx = (row * size[1]).add_(col)
+        population = size[0] * size[1]
+        return idx, population
+    elif force_undirected:
+        assert size[0] == size[1]
+        num_nodes = size[0]
+        # We only operate on the upper triangular matrix:
+        mask = row < col
+        row, col = row[mask], col[mask]
+        offset = torch.arange(1, num_nodes, device=row.device).cumsum(0)[row]
+        idx = row.mul_(num_nodes).add_(col).sub_(offset)
+        population = (num_nodes * (num_nodes + 1)) // 2 - num_nodes
+        return idx, population
+    else:
+        assert size[0] == size[1]
+        num_nodes = size[0]
+        # We remove self-loops as we do not want to take them into account
+        # when sampling negative values.
+        mask = row != col
+        row, col = row[mask], col[mask]
+        col[row < col] -= 1
+        idx = row.mul_(num_nodes - 1).add_(col)
+        population = num_nodes * num_nodes - num_nodes
+        return idx, population
+
+
+def vector_to_edge_index(idx: Tensor, size: Tuple[int, int], bipartite: bool,
+                         force_undirected: bool = False) -> Tensor:
+
+    if bipartite:  # No need to account for self-loops.
+        row = idx.div(size[1], rounding_mode='floor')
+        col = idx % size[1]
+        return torch.stack([row, col], dim=0)
+
+    elif force_undirected:
+        assert size[0] == size[1]
+        num_nodes = size[0]
+
+        offset = torch.arange(1, num_nodes, device=idx.device).cumsum(0)
+        end = torch.arange(num_nodes, num_nodes * num_nodes, num_nodes,
+                           device=idx.device)
+        row = torch.bucketize(idx, end.sub_(offset), right=True)
+        col = offset[row].add_(idx) % num_nodes
+        return torch.stack([torch.cat([row, col]), torch.cat([col, row])], 0)
+
+    else:
+        assert size[0] == size[1]
+        num_nodes = size[0]
+
+        row = idx.div(num_nodes - 1, rounding_mode='floor')
+        col = idx % (num_nodes - 1)
+        col[row <= col] += 1
+        return torch.stack([row, col], dim=0)
+    
+# @functional_transform('random_link_split')
 class RandomLinkSplit(BaseTransform):
     r"""Performs an edge-level random split into training, validation and test
     sets of a :class:`~torch_geometric.data.Data` or a
@@ -197,9 +267,11 @@ class RandomLinkSplit(BaseTransform):
         split_labels: bool = False,
         add_negative_train_samples: bool = True,
         neg_sampling_ratio: float = 1.0,
+        negative_pairs=[],
         disjoint_train_ratio: Union[int, float] = 0.0,
         edge_types: Optional[Union[EdgeType, List[EdgeType]]] = None,
         rev_edge_types: Optional[Union[EdgeType, List[EdgeType]]] = None,
+        custom_negative_sampling = True,
     ):
         if isinstance(edge_types, list):
             if rev_edge_types is None:
@@ -207,7 +279,7 @@ class RandomLinkSplit(BaseTransform):
 
             assert isinstance(rev_edge_types, list)
             assert len(edge_types) == len(rev_edge_types)
-
+        self.custom_negative_sampling = custom_negative_sampling
         self.num_val = num_val
         self.num_test = num_test
         self.is_undirected = is_undirected
@@ -215,6 +287,7 @@ class RandomLinkSplit(BaseTransform):
         self.split_labels = split_labels
         self.add_negative_train_samples = add_negative_train_samples
         self.neg_sampling_ratio = neg_sampling_ratio
+        self.negative_pairs = negative_pairs
         self.disjoint_train_ratio = disjoint_train_ratio
         self.edge_types = edge_types
         self.rev_edge_types = rev_edge_types
@@ -312,9 +385,15 @@ class RandomLinkSplit(BaseTransform):
             size = store.size()
             if store._key is None or store._key[0] == store._key[-1]:
                 size = size[0]
-            neg_edge_index = negative_sampling(edge_index, size,
+
+            if not self.custom_negative_sampling:
+                neg_edge_index = negative_sampling_ori(edge_index, size,
                                                num_neg_samples=num_neg,
                                                method='sparse')
+            else:
+                neg_edge_index = negative_sampling(self.negative_pairs,num_neg)
+            print('==========')
+            print(f'neg_edge_index: {neg_edge_index}')
 
             # Adjust ratio if not enough negative edges exist
             if neg_edge_index.size(1) < num_neg:

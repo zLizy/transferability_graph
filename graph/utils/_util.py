@@ -13,7 +13,9 @@ from torch_geometric.loader import LinkNeighborLoader
 import tqdm
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+from sklearn.metrics import precision_score
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 print(f"Device: '{device}'")
 
 import itertools
@@ -23,20 +25,71 @@ import scipy.spatial.distance as distance
 import sys
 sys.path.append('../')
 
-def get_dataset_edge_index(features,method='cosine'):
+def get_variances(*embeddings, normalized=False):
+    return [get_variance(e, normalized=normalized) for e in embeddings]
+
+def get_variance(e, normalized=False):
+    var = 1. / np.array(e)
+    return var
+
+def cosine(e0, e1):
+    h1, h2 = get_scaled_hessian(e0, e1)
+    # print(h1)
+    # print(e0)
+    # print(distance.cosine(h1, h2))
+    return distance.cosine(h1, h2)
+
+def correlation(e0, e1):
+    v1, v2 = get_variances(e0, e1, normalized=False)
+    print(len(v1),type(v1),len(v2))
+    print(distance.correlation(v1, v2))
+    return distance.correlation(v1, v2)
+
+def get_hessian(e, normalized=False):
+    hess = np.array(e)
+    return hess
+
+def get_hessians(*embeddings, normalized=False):
+    return [get_hessian(e, normalized=normalized) for e in embeddings]
+
+def get_scaled_hessian(e0, e1):
+    # h0, h1 = get_hessians(e0, e1, normalized=False)
+    h0 = np.array(e0)
+    h1 = np.array(e1)
+    return h0 / (h0 + h1 + 1e-8), h1 / (h0 + h1 + 1e-8)
+
+
+def get_dataset_edge_index(features,unique_dataset_id,emb_method='task2vec',reference_model='resnet50',base_dataset='imagenet',sim_method='cosine'):
     n = features.shape[0]
     print(f'len(dataset_features):{n}')
+    print(f'emb_method: {emb_method}')
     thres = 0.6
     distance_matrix = np.zeros([n,n])
     data_source = []
     data_target = []
+    # print(features)
+    for i, e1 in enumerate(features):
+        similarity = distance.correlation(e1,e1) #cosine(e1,e1) #1 - distance.cosine(e1,e1)
+        # print(f'similarity: {similarity}')
+        distance_matrix[i,i] = similarity
     for (i, e1), (j, e2) in itertools.combinations(enumerate(features), 2):
-        similarity = distance.cosine(e1, e2)
+        similarity = distance.correlation(e1,e2) #cosine(e1,e1) #1 - distance.cosine(e1, e2)
+        # similarity = kl(e1,e2)
         distance_matrix[i, j] = similarity
-        if similarity > thres:
+        distance_matrix[j, i] = similarity
+        if similarity < thres:
             data_source.append(i)
             data_target.append(j)
-        # distance_matrix[j, i] = distance_matrix[i, j]
+    base_dataset = 'imagenet' #'' #'eurosat' #''
+    # if not os.path.exists(f'../doc/similarity_{emb_method}_{base_dataset}.csv'):
+    if True:
+        dict_distance = {}
+        for i,name in enumerate(unique_dataset_id['dataset'].values):#
+        # for i,name in enumerate(unique_dataset_id['classname_name'].values):
+            dict_distance[name] = list(distance_matrix[i,:])
+        df_tmp = pd.DataFrame(dict_distance)
+        df_tmp.index = df_tmp.columns
+        df_tmp.to_csv(f'../doc/corr_{emb_method}_{reference_model}_{base_dataset}.csv')# _class
     # data_source = np.asarray(data_source)
     # data_target = np.asarray(data_target)
     print(f'len(data_source):{len(data_source)}')
@@ -57,61 +110,46 @@ def merge(df1,df2,col_name):
     return mapped_id
 
 
-## Train
-def train(model,train_data,batch_size=4,epochs=5):
-    start = time.time()
-    model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001,capturable=True)
-    train_loader = get_dataloader(train_data,batch_size=batch_size,is_train=True)
-    # print("Capturing:", torch.cuda.is_current_stream_capturing())
-    # torch.cuda.empty_cache()
-    for epoch in range(1, epochs+1):
-        total_loss = total_examples = 0
-        for sampled_data in tqdm.tqdm(train_loader):
-            optimizer.zero_grad()
-            # print(sampled_data['dataset'].x)
-            sampled_data.to(device)
-            # print(sampled_data)
-            # print(sampled_data['dataset'].x)
-            pred = model(sampled_data)
-            ground_truth = sampled_data["model", "trained_on", "dataset"].edge_label
-            loss = F.binary_cross_entropy_with_logits(pred, ground_truth)
-            loss.backward()
-            optimizer.step()
-            total_loss += float(loss) * pred.numel()
-            total_examples += pred.numel()
-        print(f"Epoch: {epoch:03d}, Loss: {total_loss / total_examples:.4f}")
-        if (total_loss / total_examples) < 1: break
-    train_time = time.time()-start
-    return model,round(total_loss/total_examples,4), train_time
+
 
 
 # Dataloader
-def get_dataloader(data,batch_size=8,is_train=False):
+def get_dataloader(data,label_type,batch_size=8,is_train=False):
     print('== get dataloader ==')
+    s,r,t = label_type
     # Define the validation seed edges:
-    edge_label_index = data["model", "trained_on", "dataset"].edge_label_index
+    edge_label_index = data[s,r,t].edge_label_index
+    print(data)
+    print(f'\nmax: {torch.max(edge_label_index)},  min: {torch.min(edge_label_index)}')
+    # print(f'\nedge_label_index: {edge_label_index}')
     # print(f'== edge_label_indx.dtype: {edge_label_index.dtype}')
-    edge_label = data["model", "trained_on", "dataset"].edge_label
+    edge_label = data[s,r,t].edge_label
+    # print(f'edge_label:{edge_label}')
     if is_train:
-        dataloader = LinkNeighborLoader(
-            data=data,
-            num_neighbors=[8,4],#[20, 10],
-            neg_sampling_ratio=2.0,
-            edge_label_index=(("model", "trained_on", "dataset"), edge_label_index),
-            edge_label=edge_label,
-            batch_size=batch_size,
-            shuffle=True,
-        )
+        try:
+            dataloader = LinkNeighborLoader(
+                data=data,
+                num_neighbors=[20, 10],
+                neg_sampling_ratio=2.0,
+                edge_label_index=((s,r,t), edge_label_index),
+                # edge_label=edge_label,
+                batch_size=batch_size,
+                shuffle=True,
+            )
+        except Exception as e:
+            print(e)
     else:
-        dataloader = LinkNeighborLoader(
-            data=data,
-            num_neighbors=[8,4], #[20, 10],
-            edge_label_index=(("model", "trained_on", "dataset"), edge_label_index),
-            edge_label=edge_label,
-            batch_size=batch_size,
-            shuffle=False,
-        )
+        try:
+            dataloader = LinkNeighborLoader(
+                data=data,
+                num_neighbors=[20, 10], #[8,4], 
+                edge_label_index=((s,r,t), edge_label_index),
+                # edge_label=edge_label,
+                batch_size=batch_size,
+                shuffle=False,
+            )
+        except Exception as e:
+            print(e)
     ## print a batch
     # batch = next(iter(dataloader))
     # print("Batch:", batch)
@@ -120,24 +158,39 @@ def get_dataloader(data,batch_size=8,is_train=False):
     # print("Batch indices:", batch["model", "trained_on", "dataset"].edge_label_index)
     
     # sampled_data = next(iter(val_loader))
+    print(f'\ndataloader: {dataloader}')
+    return dataloader
+
+def get_homo_dataloader(data,batch_size=8,is_train=False):
+    print('== get dataloader ==')
+    # Define the validation seed edges:
+    edge_label_index = data.edge_label_index
+    # print(f'== edge_label_indx.dtype: {edge_label_index.dtype}')
+    edge_label = data.edge_label
+    print(f'edge_label:{np.sort(edge_label)}')
+    if 2 in edge_label:
+        print('\n === 2 in edge_label')
+    if is_train:
+        dataloader = LinkNeighborLoader(
+            data=data,
+            num_neighbors=[20, 10],#[8,4],#
+            neg_sampling_ratio=2.0,
+            edge_label_index=edge_label_index,
+            # edge_label=edge_label,
+            batch_size=batch_size,
+            shuffle=True,
+        )
+    else:
+        dataloader = LinkNeighborLoader(
+            data=data,
+            num_neighbors=[20, 10],#[8,4], #,
+            edge_label_index=edge_label_index,
+            # edge_label=edge_label,
+            batch_size=batch_size,
+            shuffle=False,
+        )
     return dataloader
     
-
-def validate(model,val_data,batch_size=8):
-    preds = []
-    ground_truths = []
-    val_loader = get_dataloader(val_data,batch_size=batch_size)
-    for sampled_data in tqdm.tqdm(val_loader):
-        with torch.no_grad():
-            sampled_data.to(device)
-            preds.append(model(sampled_data))
-            ground_truths.append(sampled_data["model", "trained_on", "dataset"].edge_label)
-    pred = torch.cat(preds, dim=0).cpu().numpy()
-    ground_truth = torch.cat(ground_truths, dim=0).cpu().numpy()
-    auc = roc_auc_score(ground_truth, pred)
-    print()
-    print(f"Validation AUC: {auc:.4f}")
-    return auc
 
 def predict_model_for_dataset(model,data,gnn_method='SageConv'):
     preds = []
@@ -148,13 +201,16 @@ def predict_model_for_dataset(model,data,gnn_method='SageConv'):
     # print('============')
     # print(f'dataset_index: {dataset_index}')
     # print(f"data['model'].num_nodes: {data['model'].num_nodes}")
-
+    pred = []
+    # idx = []
     with torch.no_grad():
-        data.to(device)
-        preds.append(model(data))
+            data.to(device)
+            preds.append(model(data))
+            # print(model.x_dict)
         # ground_truths.append(edge_label)
     # pred = torch.cat(preds, dim=0).cpu().numpy()
     pred = preds[0].cpu().numpy()
+    # idx = idx.cpu().numpy()
     return pred
     # ground_truth = torch.cat(ground_truths, dim=0).cpu().numpy()
     # auc = roc_auc_score(ground_truth, pred)

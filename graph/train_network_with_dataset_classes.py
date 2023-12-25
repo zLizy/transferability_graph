@@ -8,6 +8,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Device: '{device}'")
 
 import scipy.spatial.distance as distance
+from itertools import chain
 # distance.cosine(h1, h2)
 import tqdm
 import os
@@ -22,7 +23,7 @@ from utils._util import *
 import argparse
 
 PRINT=True
-MODEL_FEATURE_DIM = 1024# 768 #
+MODEL_FEATURE_DIM = 768 #1024
 dataset_map = {
         # 'oxford_flowers102': 'flowers',
         'svhn_cropped': 'svhn',
@@ -54,12 +55,20 @@ def get_node_id(df):
     return unique_model_id, unique_dataset_id
 
 ## Retrieve the embeddings of the dataset
-def get_dataset_features(unique_dataset_id,df,reference_model='resnet50',approach='domain_similarity'):
+def get_dataset_features(
+    unique_dataset_id,
+    df,
+    reference_model='resnet50',
+    approach='domain_similarity',
+    include_class=True
+    ):
+
     _print('get_dataset_feature','')
     
     data_feat = []
     FEATURE_DIM = 2048 #768 #2048
     delete_dataset_row_idx = []
+    d_dataset_classes = {}
     for i, row in unique_dataset_id.iterrows():
         ds_name = row['dataset']
         dataset_name = ds_name.replace('/','_').replace('-','_')
@@ -67,7 +76,7 @@ def get_dataset_features(unique_dataset_id,df,reference_model='resnet50',approac
         if dataset_name in ['davanstrien_iiif_manuscripts_label_ge_50',
                             'dsprites',
                             'age_prediction',
-                            'FastJobs_Visual_Emotional_Analysis',
+                            'FastJobs_Visual_Emotional_Analysis'
                            ]:
             delete_dataset_row_idx.append(i)
             continue
@@ -130,15 +139,22 @@ def get_dataset_features(unique_dataset_id,df,reference_model='resnet50',approac
                 continue
                 print('----------')
                 features = np.zeros((1,FEATURE_DIM))
-        features = np.mean(features,axis=0)
-        # print(f"shape of {dataset_name} is {features.shape}")
-        data_feat.append(features)
+        if not include_class:
+            features = np.mean(features,axis=0)
+            data_feat.append(features)
+        else:
+            d_dataset_classes[ds_name] = list(range(features.shape[0]))
+            data_feat.extend(features)
+        print(f"shape of {dataset_name} is {features.shape}")
+        
     data_feat = np.stack(data_feat)
     # size = 25
     # data_feat = data_feat[:,:size]
     # data_feat.astype(np.double)
     print(f'== data_feat.shape:{data_feat.shape}')
     # return torch.from_numpy(data_feat).to(torch.float), delete_dataset_row_idx
+    if include_class:
+        return data_feat,delete_dataset_row_idx, d_dataset_classes
     return data_feat,delete_dataset_row_idx
 
 ## Retrieve the embeddings of the model
@@ -255,16 +271,22 @@ def drop_nodes(df,unique_model_id,delete_model_row_idx,unique_dataset_id,delete_
     print(f'len(df): {len(df)}')
     return df, unique_model_id, unique_dataset_id
 
-def get_edge_index(df,unique_model_id,unique_dataset_id,accuracy_thres=0.6,ratio=1.0):
+def get_edge_index(df,unique_model_id,unique_dataset_id,accuracy_thres=0.6,ratio=1.0,include_class=False):
     if ratio != 1:
         df = df.sample(frac=ratio, random_state=1)
     print()
     print('==========')
     print(f'len(df): {len(df)}')
     df = df[df['accuracy']>=accuracy_thres]
+    if include_class:
+        df = pd.merge(df,unique_dataset_id,left_on='dataset',right_on='dataset',how='left').dropna(subset=['mappedID'])
     print(print(f'len(df) after filtering models with low performance: {len(df)}'))
+    print(df.head())
     mapped_model_id = merge(df['model'],unique_model_id,'model')
-    mapped_dataset_id = merge(df['dataset'],unique_dataset_id,'dataset')
+    if not include_class:
+        mapped_dataset_id = merge(df['dataset'],unique_dataset_id,'dataset')
+    else:
+        mapped_dataset_id = torch.from_numpy(df['mappedID'].values)
     edge_index_model_to_dataset = torch.stack([mapped_model_id, mapped_dataset_id], dim=0)
     print(f'== edge_index_model_to_dataset')
     print(f'mapped_model_id.len: {len(mapped_model_id)}, mapped_dataset_id.len: {len(mapped_dataset_id)}')
@@ -299,7 +321,7 @@ def preprocess(args):
 
     df = pd.concat([df_config[['dataset','model','input_shape','configs','accuracy']],df_finetuned[['dataset','model','input_shape','configs','accuracy']]],ignore_index=True)
     df.index = range(len(df))
-    ######################
+     ######################
     ## Add an empty row to indicate the dataset
     ######################
     df.loc[len(df)] = {'dataset':args.test_dataset}
@@ -321,7 +343,11 @@ def preprocess(args):
     
     # get dataset features
     if args.contain_dataset_feature:
-        data_feat, delete_dataset_row_idx = get_dataset_features(unique_dataset_id,df,reference_model=args.dataset_reference_model,approach=args.dataset_emb_method)
+        data_feat, delete_dataset_row_idx, d_dataset_classes = get_dataset_features(
+            unique_dataset_id,df,
+            reference_model=args.dataset_reference_model,
+            approach=args.dataset_emb_method,
+            include_class=args.include_class)
     else:
         data_feat = []
         delete_dataset_row_idx = []
@@ -332,7 +358,16 @@ def preprocess(args):
 
     # get common nodes
     df, unique_model_id, unique_dataset_id = drop_nodes(df,unique_model_id,delete_model_row_idx,unique_dataset_id,delete_dataset_row_idx)
-    
+    if args.include_class:
+        unique_dataset_id = pd.DataFrame.from_dict(d_dataset_classes,orient='index')
+        unique_dataset_id = unique_dataset_id.unstack().reset_index().dropna()
+        unique_dataset_id.columns = ['index','dataset','count']
+        print(unique_dataset_id)
+        count = sum([v[-1] for v in d_dataset_classes.values()])
+        print(f'count: {count}')
+        unique_dataset_id['classname_name'] = list(chain.from_iterable([list(map(lambda x: k+str(x),d_dataset_classes[k])) for k in d_dataset_classes.keys()]))
+        unique_dataset_id['mappedID'] = list(range(len(unique_dataset_id)))
+
     ##########
     # get specific dataset index
     ##########
@@ -344,7 +379,7 @@ def preprocess(args):
         model_idx = -1
 
     # get edge index
-    edge_index_model_to_dataset = get_edge_index(df,unique_model_id,unique_dataset_id,args.accuracy_thres,args.finetune_ratio)
+    edge_index_model_to_dataset = get_edge_index(df,unique_model_id,unique_dataset_id,args.accuracy_thres,args.finetune_ratio,args.include_class)
 
     # get dataset-dataset edge index
     edge_index_dataset_to_dataset = get_dataset_edge_index(data_feat,unique_dataset_id,args.dataset_emb_method)
@@ -481,6 +516,7 @@ if __name__ == '__main__':
     parser.add_argument('-embed_model_feature',default='True', type=str,help="embed_model_feature")
     parser.add_argument('-complete_model_features',default='True',type=str)
     parser.add_argument('-dataset_reference_model',default='resnet50',type=str)
+    parser.add_argument('-include_class',default=False,type=bool)
 
     parser.add_argument('-gnn_method',default='', type=str, help='contain_model_feature')
     parser.add_argument('-accuracy_thres',default=0.7, type=float, help='accuracy_thres')
@@ -499,8 +535,9 @@ if __name__ == '__main__':
     args.embed_dataset_feature = str2bool(args.embed_dataset_feature)
     args.complete_model_features = str2bool(args.complete_model_features)
 
-    # args.dataset_emb_method  = 'task2vec' #''
-    args.dataset_reference_model = 'resnet50' #'Ahmed9275_Vit-Cifar100' #''johnnydevriese_vit_beans
+    args.dataset_emb_method  = 'domain_similarity' #''
+    args.dataset_reference_model = 'resnet50' #''johnnydevriese_vit_beans
+    args.include_class = True
     # args.gnn_method = 'node2vec'
 
     main(args)

@@ -1,0 +1,98 @@
+,model,input_shape,output_shape,architectures,task,dataset,#labels,labels,task_specific_params,problem_type,finetuning_task,label
+0,jaesun/distilbert-base-uncased-finetuned-cola,,768,DistilBertForSequenceClassification,,glue/cola,2,"['unacceptable', 'acceptable']",,single_label_classification,,glue/cola
+1,aXhyra/presentation_sentiment_1234567,,768,DistilBertForSequenceClassification,,tweet_eval/sentiment,3,"['negative', 'neutral', 'positive']",,single_label_classification,,tweet_eval/sentiment
+2,moshew/bert-mini-sst2-distilled,,256,BertForSequenceClassification,,glue/sst2,2,"['negative', 'positive']",,,,glue/sst2
+3,chiragasarpota/scotus-bert,,128,BertForSequenceClassification,,pasinit/scotus,14,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5', 'LABEL_6', 'LABEL_7', 'LABEL_8', 'LABEL_9', 'LABEL_10', 'LABEL_11', 'LABEL_12', 'LABEL_13']",,single_label_classification,scotus,pasinit/scotus
+4,SetFit/distilbert-base-uncased__sst2__train-32-9,,768,DistilBertForSequenceClassification,,glue/sst2,2,"['negative', 'positive']",,single_label_classification,,glue/sst2
+7,JB173/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+9,uygarkurt/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']",,single_label_classification,,emotion
+12,citizenlab/distilbert-base-multilingual-cased-toxicity,,768,DistilBertForSequenceClassification,,toxicity,2,"['toxic', 'not_toxic']",,,,toxicity
+13,neibla/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+14,Anthos23/FS-distilroberta-fine-tuned,,768,RobertaForSequenceClassification,,tweet_eval/sentiment,3,"['negative', 'neutral', 'positive']",,single_label_classification,,tweet_eval/sentiment
+15,pietrotrope/emotion_final,,768,DistilBertForSequenceClassification,,tweet_eval/emotion,4,"['anger', 'joy', 'optimism', 'sadness']",,single_label_classification,,tweet_eval/emotion
+16,ali2066/finetuned_sentence_itr1_2e-05_all_26_02_2022-04_03_26,,768,DistilBertForSequenceClassification,,glue/sst2,2,"['NEGATIVE', 'POSITIVE']",,single_label_classification,sst-2,glue/sst2
+17,usami/distilbert-base-uncased-finetuned-cola,,768,DistilBertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/cola
+19,Nanatan/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+21,markt23917/finetuning-sentiment-model-3000-samples,,768,DistilBertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+22,moghis/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+23,aXhyra/presentation_emotion_31415,,768,DistilBertForSequenceClassification,,tweet_eval/emotion,4,"['anger', 'joy', 'optimism', 'sadness']",,single_label_classification,,tweet_eval/emotion
+24,JNK789/distilbert-base-uncased-finetuned-tweets-emoji-dataset,,768,DistilBertForSequenceClassification,,tweet_eval/emoji,20,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5', 'LABEL_6', 'LABEL_7', 'LABEL_8', 'LABEL_9', 'LABEL_10', 'LABEL_11', 'LABEL_12', 'LABEL_13', 'LABEL_14', 'LABEL_15', 'LABEL_16', 'LABEL_17', 'LABEL_18', 'LABEL_19']",,single_label_classification,,tweet_eval/emoji
+25,aXhyra/demo_sentiment_31415,,768,DistilBertForSequenceClassification,,tweet_eval/sentiment,3,"['negative', 'neutral', 'positive']",,single_label_classification,,tweet_eval/sentiment
+27,aXhyra/emotion_trained_31415,,768,DistilBertForSequenceClassification,,tweet_eval/emotion,4,"['anger', 'joy', 'optimism', 'sadness']",,single_label_classification,,tweet_eval/emotion
+29,viviastaari/finetuning-sentiment-analysis-en-id,,768,DistilBertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+30,jasonyim2/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+31,PrasunMishra/finetuning-sentiment-model-3000-samples,,768,DistilBertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+32,marcelcastrobr/sagemaker-distilbert-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']",,single_label_classification,,emotion
+33,philschmid/tiny-distilbert-classification,,2,DistilBertForSequenceClassification,,glue/sst2,2,"['NEGATIVE', 'POSITIVE']",,,sst-2,glue/sst2
+35,vaariis/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+37,heranm/finetuning-sentiment-model-3000-samples,,768,DistilBertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+39,SetFit/distilbert-base-uncased__hate_speech_offensive__train-16-1,,768,DistilBertForSequenceClassification,,hate_speech_offensive,3,"['hate speech', 'offensive language', 'neither']",,single_label_classification,,hate_speech_offensive
+40,riyadhctg/distilbert-base-uncased-finetuned-cola,,768,DistilBertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/cola
+41,abdelkader/distilbert-base-uncased-finetuned-emotion,,768,DistilBertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+42,juliensimon/autonlp-imdb-demo-hf-16622767,,768,DistilBertForSequenceClassification,,imdb,2,"['0', '1']",,single_label_classification,,imdb
+44,SetFit/distilbert-base-uncased__sst2__train-16-0,,768,DistilBertForSequenceClassification,,glue/sst2,2,"['negative', 'positive']",,single_label_classification,,glue/sst2
+48,vinai/bertweet-base,,768,RobertaForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+50,roberta-base,,768,RobertaForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+51,yukta10/finetuning-sentiment-model-3000-samples,,768,DistilBertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+52,albert-base-v2,,768,AlbertForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+53,bert-base-cased,,768,BertForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+56,connectivity/bert_ft_qqp-25,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+58,michiyasunaga/LinkBERT-base,,768,BertModel,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+59,bert-large-uncased,,1024,BertForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+60,bert-base-uncased,,768,BertForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+62,distilbert-base-uncased,,768,DistilBertForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+63,Jeevesh8/init_bert_ft_qqp-28,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+64,connectivity/bert_ft_qqp-17,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+65,emrecan/bert-base-multilingual-cased-snli_tr,,768,BertForSequenceClassification,,multi_nli,3,"['entailment', 'neutral', 'contradiction']",,single_label_classification,snli_tr,multi_nli
+66,navsad/navid_test_bert,,768,BertForSequenceClassification,,glue/cola,2,"['unacceptable', 'acceptable']",,single_label_classification,,glue/cola
+68,Jeevesh8/bert_ft_cola-88,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+69,w11wo/sundanese-bert-base-emotion-classifier,,768,BertForSequenceClassification,,sundanese-twitter,4,"['sadness', 'joy', 'fear', 'anger']",,single_label_classification,,sundanese-twitter
+72,XSY/albert-base-v2-imdb-calssification,,768,AlbertForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+73,Jeevesh8/bert_ft_cola-60,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+74,Jeevesh8/6ep_bert_ft_cola-29,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+76,connectivity/bert_ft_qqp-94,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+78,aychang/bert-base-cased-trec-coarse,,768,BertForSequenceClassification,,trec,6,"['DESC', 'ENTY', 'ABBR', 'HUM', 'NUM', 'LOC']",,,,trec
+79,ishan/bert-base-uncased-mnli,,768,BertForSequenceClassification,,multi_nli,3,"['LABEL_0', 'LABEL_1', 'LABEL_2']",,,mnli,multi_nli
+80,connectivity/bert_ft_qqp-1,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+82,gchhablani/bert-base-cased-finetuned-rte,,768,BertForSequenceClassification,,glue/rte,2,"['entailment', 'not_entailment']",,single_label_classification,rte,glue/rte
+83,Jeevesh8/bert_ft_qqp-39,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+84,Jeevesh8/init_bert_ft_qqp-33,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+85,Jeevesh8/bert_ft_qqp-68,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+86,mujeensung/bert-base-cased_mnli_bc,,768,BertForSequenceClassification,,multi_nli,3,"['entailment', 'neutral', 'contradiction']",,single_label_classification,mnli,multi_nli
+87,Jeevesh8/bert_ft_qqp-9,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+90,aviator-neural/bert-base-uncased-sst2,,768,BertForSequenceClassification,,glue/sst2,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/sst2
+93,gchhablani/bert-base-cased-finetuned-wnli,,768,BertForSequenceClassification,,glue/wnli,2,"['not_entailment', 'entailment']",,single_label_classification,wnli,glue/wnli
+98,Jeevesh8/init_bert_ft_qqp-49,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+99,ASCCCCCCCC/distilbert-base-chinese-amazon_zh_20000,,768,BertForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+100,Splend1dchan/bert-base-uncased-slue-goldtrascription-e3-lr1e-4,,768,BertForSequenceClassification,,tweet_eval/sentiment,3,"['Negative', 'Neutral', 'Positive']",,single_label_classification,,tweet_eval/sentiment
+101,Jeevesh8/bert_ft_qqp-88,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+102,Jeevesh8/512seq_len_6ep_bert_ft_cola-91,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+104,connectivity/bert_ft_qqp-96,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+107,Jeevesh8/6ep_bert_ft_cola-12,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+108,Jeevesh8/init_bert_ft_qqp-24,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+110,Alireza1044/albert-base-v2-qnli,,768,AlbertForSequenceClassification,,glue/qnli,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,qnli,glue/qnli
+111,oferweintraub/bert-base-finance-sentiment-noisy-search,,768,BertForSequenceClassification,,tweet_eval/sentiment,3,"['negative', 'neutral', 'positive']",,single_label_classification,,tweet_eval/sentiment
+112,Jeevesh8/bert_ft_qqp-55,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+113,classla/bcms-bertic-parlasent-bcs-ter,,768,ElectraForSequenceClassification,,tweet_eval/sentiment,3,"['Negative', 'Neutral', 'Positive']",,single_label_classification,,tweet_eval/sentiment
+114,justinqbui/bertweet-covid19-base-uncased-pretraining-covid-vaccine-tweets,,768,RobertaForMaskedLM,,covid-19_tweets,2,"['LABEL_0', 'LABEL_1']",,,,covid-19_tweets
+116,connectivity/bert_ft_qqp-7,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+117,roberta-large,,1024,RobertaForMaskedLM,,wikipedia+bookcorpus,2,"['LABEL_0', 'LABEL_1']",,,,wikipedia+bookcorpus
+124,boychaboy/MNLI_roberta-base,,768,RobertaForSequenceClassification,,multi_nli,3,"['entailment', 'neutral', 'contradiction']",,,mnli,multi_nli
+125,fabriceyhc/bert-base-uncased-imdb,,768,BertForSequenceClassification,,imdb,2,"['neg', 'pos']",,single_label_classification,,imdb
+127,elozano/tweet_offensive_eval,,768,RobertaForSequenceClassification,,tweet_eval/offensive,2,"['Non-Offensive', 'Offensive']",,single_label_classification,,tweet_eval/offensive
+131,YeRyeongLee/electra-base-discriminator-finetuned-filtered-0602,,768,ElectraForSequenceClassification,,emotion,6,"['LABEL_0', 'LABEL_1', 'LABEL_2', 'LABEL_3', 'LABEL_4', 'LABEL_5']",,single_label_classification,,emotion
+136,crcb/isear_bert,,768,RobertaForSequenceClassification,,crcb/autotrain-data-isear_bert,7,"['anger', 'disgust', 'fear', 'guilt', 'joy', 'sadness', 'shame']",,single_label_classification,,crcb/autotrain-data-isear_bert
+137,connectivity/cola_6ep_ft-33,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,cola,glue/cola
+138,connectivity/cola_6ep_ft-22,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,cola,glue/cola
+139,ncduy/roberta-imdb-sentiment-analysis,,768,RobertaForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,,,imdb
+140,vesteinn/XLMR-ENIS-finetuned-cola,,768,XLMRobertaForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/cola
+141,isakbos/Q8BERT_COLA_L_512,,768,QuantizedBertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+142,Jeevesh8/bert_ft_qqp-40,,768,BertForSequenceClassification,,glue/qqp,2,"['LABEL_0', 'LABEL_1']",,,,glue/qqp
+144,anirudh21/bert-base-uncased-finetuned-qnli,,768,BertForSequenceClassification,,glue/qnli,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/qnli
+145,Jeevesh8/6ep_bert_ft_cola-47,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,,glue/cola
+147,connectivity/cola_6ep_ft-10,,768,BertForSequenceClassification,,glue/cola,2,"['LABEL_0', 'LABEL_1']",,,cola,glue/cola
+149,Alassea/glue_sst_classifier,,768,BertForSequenceClassification,,glue/sst2,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,glue/sst2
+156,matthewburke/korean_sentiment,,768,ElectraForSequenceClassification,,imdb,2,"['LABEL_0', 'LABEL_1']",,single_label_classification,,imdb
+160,anvay/finetuning-cardiffnlp-sentiment-model,,768,RobertaForSequenceClassification,,tweet_eval/sentiment,3,"['Negative', 'Neutral', 'Positive']",,single_label_classification,,tweet_eval/sentiment
+161,vinai/bertweet-covid19-base-cased,,768,RobertaForMaskedLM,,covid-19_tweets,2,"['LABEL_0', 'LABEL_1']",,,,covid-19_tweets
+162,vinai/bertweet-covid19-base-uncased,,768,RobertaForMaskedLM,,covid-19_tweets,2,"['LABEL_0', 'LABEL_1']",,,,covid-19_tweets

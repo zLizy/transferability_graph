@@ -392,8 +392,8 @@ class RandomLinkSplit(BaseTransform):
                                                method='sparse')
             else:
                 neg_edge_index = negative_sampling(self.negative_pairs,num_neg)
-            print('==========')
-            print(f'neg_edge_index: {neg_edge_index}')
+            # print('==========')
+            # print(f'neg_edge_index: {neg_edge_index}')
 
             # Adjust ratio if not enough negative edges exist
             if neg_edge_index.size(1) < num_neg:

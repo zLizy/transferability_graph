@@ -2,14 +2,19 @@ import os
 import pandas as pd
 from glob import glob
 
-dataset = 'cifar100'
+# dataset = 'stanfordcars' #
+# dataset = 'cifar100'
+dataset = 'oxford_flowers102'
+dataset = 'oxford_iiit_pet'
 root = f'../rank/{dataset}'
 
 exclude_folders = ['contain_dataset_feature','not_contain_dataset_feature','.DS_Store']
 
-folders = os.listdir(root)
+# folders = os.listdir(root)
+folders = ['lr_node2vec','lr_node2vec+']
 
 for folder in folders[:]:
+	if '.csv' in folder: continue
 	print(f'\n folder: {folder}')
 	if folder in exclude_folders[-1]: continue
 	if folder in exclude_folders[:2]:
@@ -22,6 +27,7 @@ for folder in folders[:]:
 	print('\n',files[0])
 	
 	for file in files:
+			if ',' in file: continue
 			parts = []
 			file_name = file.split('/')[-1]
 			components = file_name.split('_')

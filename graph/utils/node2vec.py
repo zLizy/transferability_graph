@@ -1,20 +1,26 @@
 from typing import Optional, Tuple
 import numpy as np
 import random
-random.seed(10)
+random.seed(0)
+import time
+import sys
 
 import torch
 from torch import Tensor
 from torch.nn import Embedding
 from torch.utils.data import DataLoader
-from gensim.models import Word2Vec
-from pecanpy import pecanpy
+
+
+from utils.graph import Graph
+
 # from pecanpy.experimental import Node2vecPlusPlus
 from sklearn.metrics import average_precision_score
+from torch_geometric.utils.convert import to_scipy_sparse_matrix
+from pecanpy import pecanpy
 
 ###DEFAULT HYPER PARAMS###
 HPARAM_P = 1
-HPARAM_DIM = 128
+HPARAM_DIM = 64 #128
 ##########################
 
 # from torch_geometric.typing import WITH_PYG_LIB, WITH_TORCH_CLUSTER
@@ -24,6 +30,133 @@ from torch_geometric.utils import sort_edge_index
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 # from torch_geometric.utils.sparse import index2ptr
 
+
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
+print(f"Device: '{device}'")
+
+class Classifier(torch.nn.Module):
+    def forward(self, model,edge_index: Tensor) -> Tensor:
+        # Convert node embeddings to edge-level representations:
+        edge_feat_0 = model[edge_index[0]]
+        edge_feat_1 = model[edge_index[1]]
+        # edge_feat_1= x[edge_index[1]]
+        # Apply dot-product to get a prediction per supervision edge:
+        return (edge_feat_0 * edge_feat_1).sum(dim=-1)
+
+class N2VPlusModel():
+    def __init__(
+            self,
+            edge_index,
+            embedding_dim=64,
+            walk_length=6,#5,
+            context_size=5,
+            walks_per_node=5,
+            num_negative_samples=1,
+            negative_pairs=[],
+            extend=True,
+            epochs=50,
+            ):
+        self.epochs = epochs
+        self.base = Node2VecPlus(
+            edge_index,
+            embedding_dim=embedding_dim,
+            walk_length= walk_length, #20,
+            context_size=context_size,
+            walks_per_node=walks_per_node, #10,
+            num_negative_samples=num_negative_samples,
+            negative_pairs=negative_pairs,
+            p=q,
+            q=1,
+            sparse=False,
+        )
+
+    def forward(self,data):
+        pred = self.classifier(
+            self.base(),
+            data
+        )
+        return pred
+    
+class N2VModel(torch.nn.Module):
+    def __init__(
+        self,
+        edge_index,
+        edge_attr,
+        node_IDs,
+        embedding_dim=32,#128 64 32
+        walk_length=10,#5,
+        context_size=10,
+        walks_per_node=10,
+        num_negative_samples=1,
+        negative_pairs=[],
+        p=1,
+        q=1,
+        sparse=False, #True
+        epochs=15,
+        extend=False,
+    ):
+        super().__init__()
+        self.epochs = epochs
+        self.base = Node2Vec(
+            edge_index,
+            edge_attr,
+            node_IDs,
+            embedding_dim=embedding_dim,
+            walk_length= walk_length, #20,
+            context_size=context_size,
+            walks_per_node=walks_per_node, #10,
+            num_negative_samples=num_negative_samples,
+            negative_pairs=negative_pairs,
+            p=1,
+            q=1,
+            sparse=True,
+            extend=extend,
+        ).to(device)
+        self.classifier = Classifier()
+    
+    def forward(self,data):
+        pred = self.classifier(
+            self.base(),
+            data
+        )
+        self.x_dict = self.base()
+        return pred
+    
+    @torch.no_grad()
+    def test(self):
+        self.base.eval()
+        z = self.base()
+        # acc = model.test(z[data.train_mask], data.y[data.train_mask],
+        #                  z[data.test_mask], data.y[data.test_mask],
+        #                  max_iter=150)
+        # return acc
+    
+    def train(self):
+        start = time.time()
+        num_workers = 0 if sys.platform.startswith('win') else 4
+        loader = self.base.loader(batch_size=64, shuffle=True,
+                            num_workers=1)
+        optimizer = torch.optim.SparseAdam(list(self.base.parameters()), lr=0.01)
+        
+        for epoch in range(1, 1+self.epochs):
+            self.base.train()
+            total_loss = 0
+            count = 0
+            for pos_rw, neg_rw in loader:
+                optimizer.zero_grad()
+                if count == 0:
+                    count += 1
+                loss = self.base.loss(pos_rw.to(device), neg_rw.to(device))
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+            loss = total_loss / len(loader)
+            # acc = test()
+            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}') #, Acc: {acc:.4f}')
+        train_time = time.time()-start
+        return loss, train_time
+    
 def index2ptr(index: Tensor, size: int) -> Tensor:
     return torch._convert_indices_from_coo_to_csr(
         index, size, out_int32=index.dtype == torch.int32)
@@ -104,7 +237,8 @@ class Node2Vec(torch.nn.Module):
         # print(f'row: {r.numpy()}')
         # print(f'col: {c.numpy()}')
         # print(f'edge_index: {list(edge_index.numpy())}')
-        print(f'max_row: {max(edge_index[0])}, max_col: {max(edge_index[1])}')
+        print(f'\nmax_row: {max(edge_index[0])}, max_col: {max(edge_index[1])}')
+        print(f'min_row: {min(edge_index[0])}, min_col: {min(edge_index[1])}')
         self.rowptr, self.col = index2ptr(row, self.num_nodes), col
         # print(edge_index)
         # print(f'self.rowptr {self.rowptr}')
@@ -121,7 +255,10 @@ class Node2Vec(torch.nn.Module):
         self.q = q
         self.num_negative_samples = num_negative_samples
         self.negative_pairs = negative_pairs
-        
+
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+
         self.workers = workers
         self.extend = extend
 
@@ -130,35 +267,23 @@ class Node2Vec(torch.nn.Module):
                                    sparse=sparse)
         
         if extend:
-            self.positive_pairs, w2v_weights = self.get_node2vecplus_walks(edge_index,edge_attr)
-            self.embedding.weight.data.copy_(w2v_weights)
+            self.positive_pairs = self.get_node2vecplus_walks()
+            # self.embedding.weight.data.copy_(w2v_weights)
 
         self.reset_parameters()
 
-    def get_node2vecplus_walks(self,edge_index,edge_attr=None):
-        from torch_geometric.utils.convert import to_scipy_sparse_matrix
+    def get_node2vecplus_walks(self):
         print('\n ----------')
-        adj_mat = to_scipy_sparse_matrix(edge_index,edge_attr=edge_attr).todense()
-        print(f'adj_mat.shape: {adj_mat.shape}')
-        print(f'adj_mat: {adj_mat}')
+        adj_mat = to_scipy_sparse_matrix(self.edge_index,edge_attr=self.edge_attr).todense()
+        print(f'\nadj_mat.shape: {adj_mat.shape}')
+        # print(f'adj_mat: {adj_mat}')
         # print(f'IDs: {len(IDs)}')
         # adj_mat, IDs = np.load(network_fp).values()
-        IDs = range(adj_mat.shape[0])
-        g = pecanpy.DenseOTF.from_mat(adj_mat, IDs, extend=True)
-
-        # simulate random walks and genearte embedings
-        walks = g.simulate_walks(num_walks=self.walks_per_node+2, walk_length=self.walk_length)
-        print(f'walks: {len(walks)}, {walks[0]}')
-        # return walks
-        
-        w2v = Word2Vec(walks, vector_size=self.embedding_dim, window=self.context_size,
-                  min_count=0, sg=1, workers=self.workers, epochs=1)
-
-        # sort embeddings by IDs
-        IDmap = {j:i for i,j in enumerate(w2v.wv.index_to_key)}
-        idx_ary = [IDmap[i] for i in IDs]
-        X_emd = torch.tensor(w2v.wv.vectors[idx_ary])
-        return walks, X_emd
+        self.IDs = range(adj_mat.shape[0])
+        g = pecanpy.DenseOTF.from_mat(adj_mat, self.IDs, extend=True)
+        positive_walks = g.simulate_walks(num_walks=self.walks_per_node, walk_length=self.walk_length)
+        return positive_walks
+    
 
     def reset_parameters(self):
         r"""Resets all learnable parameters of the module."""
@@ -191,7 +316,7 @@ class Node2Vec(torch.nn.Module):
         return torch.cat(walks, dim=0)
     
     @torch.jit.export
-    def pos_sample(self,batch):
+    def pos_sample_plus(self,batch):
         # print(f'extend: {self.extend}')
         # walks = [[walk for walk in self.positive_pairs if walk[0] == node] for node in batch.numpy()]
         walks = []
@@ -210,6 +335,7 @@ class Node2Vec(torch.nn.Module):
                     extended_walks.append(extended_walk)
             walks.append(torch.as_tensor(random.sample(extended_walks,self.walks_per_node)))
         # batch = batch.repeat(self.walks_per_node)
+        # print(f'\n walks.size:{len(walks)}, walk length: {walks[0].shape} ')
         return torch.cat(walks, dim=0)
     
     @torch.jit.export
@@ -253,14 +379,18 @@ class Node2Vec(torch.nn.Module):
             batch = torch.tensor(batch)
         # print(f'self.extend: {self.extend}')
         if self.extend:
-            # pos_sample = self.get_node2vecplus_walks(batch)
-            pos_sample = self.pos_sample(batch)
+            pos_sample = self.pos_sample_plus(batch)
         else:
             pos_sample = self.pos_sample_ori(batch)
         # print(f'pos_sample: {pos_sample}')
         neg_sample = self.neg_sample(batch)
         # print(f'neg_sample: {neg_sample}')
         return pos_sample, neg_sample
+    
+
+    @torch.jit.export
+    def loss_e2e(self):
+        pass
 
     @torch.jit.export
     def loss(self, pos_rw: Tensor, neg_rw: Tensor) -> Tensor:
@@ -269,17 +399,18 @@ class Node2Vec(torch.nn.Module):
         # Positive loss.
         start, rest = pos_rw[:, 0], pos_rw[:, 1:].contiguous()
         # print()
-        # print(f'pos_rw: {pos_rw.shape}')
-        # print(f'start: {start.shape}, rest: {rest.shape}, rest.view(-1)): {rest.view(-1).shape}')
-        
+        # print(f'pos_rw: {pos_rw.shape}, neg_rw: {neg_rw.shape}')
+        # print(f'start: {start.shape}, rest: {rest.shape}')
+        # print(f'pos_rw.size(0): {pos_rw.size(0)}, rest.view(-1)): {rest.view(-1).shape}')
+        # print(f'unique rest.view(-1): {torch.unique(rest.view(-1))}')
 
         h_start = self.embedding(start).view(pos_rw.size(0), 1,
                                              self.embedding_dim)
         h_rest = self.embedding(rest.view(-1)).view(pos_rw.size(0), -1,
                                                     self.embedding_dim)
-        # print(f'h_start.shape: {h_start.shape}')
-        # print(f'h_rest.shape: {h_rest.shape}')
-        # print(f'h_start * h_rest: {(h_start * h_rest).shape}')
+        # print(f'\nh_start.shape: {h_start.shape}')
+        # print(f'\nh_rest.shape: {h_rest.shape}')
+        # print(f'\nh_start * h_rest: {(h_start * h_rest).shape}')
 
         out = (h_start * h_rest).sum(dim=-1).view(-1)
         pos_loss = -torch.log(torch.sigmoid(out) + self.EPS).mean()

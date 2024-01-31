@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import pandas as pd
+import networkx as nx
+
 from torch import Tensor
 import torch.nn.functional as F
 import torch_geometric.transforms as T
@@ -50,21 +52,26 @@ class HGraph:
         
         self.data['model'].node_id = torch.arange(len(unique_model_id))#len(torch.unique(edge_index[0])))#+self.data["dataset"].num_nodes
         # self.data['model'].node_id = torch.from_numpy(self.model_idx).to(torch.int64) #torch.arange(self.data.max_dataset_idx + 1)
-        print(f"\nself.data['model'].node_id: {self.data['model'].node_id}")
+        # print(f"\nself.data['model'].node_id: {self.data['model'].node_id}")
         
+        data_feature_shape = list(dataset_features.values())[0].shape[0]
+        features = []
+        for i in range(len(unique_dataset_id)):
+            features.append(dataset_features[unique_dataset_id[unique_dataset_id['mappedID']==i]['dataset'].values[0]])
+
         if contain_model_feature:
             self.data["model"].x = torch.from_numpy(model_features).to(torch.float)
         else:
-            self.data['model'].x = torch.rand((len(unique_model_id),dataset_features.shape[1]))
+            self.data['model'].x = torch.rand((len(unique_model_id),data_feature_shape))
 
         # self.data["dataset"].x = dataset_features
         # self.data["dataset"].x = torch.from_numpy(dataset_features).to(torch.float)
         # datset_features = np.around(np.random.random_sample((len(dataset_features), 128))+0.00001,3)
         # dataset_features = np.random.randint(0,1,size=(len(dataset_features),20))
         if contain_dataset_feature:
-            self.data['dataset'].x = torch.from_numpy(dataset_features).to(torch.float)
+            self.data['dataset'].x = torch.from_numpy(np.vstack(features)).to(torch.float)
         else:
-            self.data['dataset'].x = torch.rand((len(unique_dataset_id),dataset_features.shape[1]))
+            self.data['dataset'].x = torch.rand((len(unique_dataset_id),data_feature_shape))
 
         # print()
         # print('self.data["dataset"].x.shape')
@@ -102,7 +109,9 @@ class HGraph:
 
         self.negative_pairs= negative_pairs
         print()
-        print(f'-- max node index: {torch.max(edge_index_accu_model_to_dataset),0}, {torch.max(edge_index_tran_model_to_dataset),0},{torch.max(edge_index_dataset_to_dataset),0}')
+        # print(f'\nedge_index_accu_model_to_dataset: {edge_index_accu_model_to_dataset}')
+        # print(f'\nedge_index_tran_model_to_dataset: {edge_index_tran_model_to_dataset}')
+        # print(f'-- max node index: {torch.max(edge_index_accu_model_to_dataset),0}, {torch.max(edge_index_tran_model_to_dataset),0},{torch.max(edge_index_dataset_to_dataset),0}')
 
         # print(self.data.metadata())
 
@@ -157,6 +166,26 @@ class HGraph:
         # self.train_data, self.val_data, self.test_data = # self.val_data, 
         return transform(self.data) 
 
+class LineGraph():
+    def __init__(   self,
+                    edge_index_accu_model_to_dataset,
+                    edge_index_tran_model_to_dataset,
+                    edge_index_dataset_to_dataset,
+                    without_transfer = True,
+                    # max_model_id
+                ): 
+        if without_transfer:
+            edge_index = edge_index_accu_model_to_dataset
+        else:
+            edge_index = torch.cat((edge_index_accu_model_to_dataset,edge_index_tran_model_to_dataset),1)
+        edge_index = torch.cat((edge_index, edge_index_dataset_to_dataset), 1).numpy()
+        edges = list(map(tuple,edge_index))
+        G = nx.Graph()
+        # print(f'\n edges: {edges}')
+        G.add_edges_from(edges)
+        self.graph = G
+        
+        
 
 class Graph():
     def __init__(   self,
@@ -167,7 +196,8 @@ class Graph():
                     edge_attr_tran_model_to_dataset,
                     edge_index_dataset_to_dataset,
                     edge_attr_dataset_to_dataset,
-                    without_transfer = True,
+                    without_transfer = False,
+                    without_accuracy = False,
                     # max_model_id
                 ):
 
@@ -179,12 +209,17 @@ class Graph():
         
         if without_transfer:
             edge_index = edge_index_accu_model_to_dataset
+        # elif without_accuracy:
+        #     edge_index = edge_index_tran_model_to_dataset
         else:
             edge_index = torch.cat((edge_index_accu_model_to_dataset,edge_index_tran_model_to_dataset),1)
-        edge_index = torch.cat((edge_index, edge_index_dataset_to_dataset), 1)
+        
+        edge_index = torch.cat((edge_index, edge_index_dataset_to_dataset), 1).type(torch.int64)
         
         if without_transfer:
             edge_attr = edge_attr_accu_model_to_dataset
+        # if without_accuracy:
+            # edge_attr = edge_attr_tran_model_to_dataset
         else:
             edge_attr = torch.cat((edge_attr_accu_model_to_dataset,edge_attr_tran_model_to_dataset))
         edge_attr = torch.cat((edge_attr, edge_attr_dataset_to_dataset))
@@ -194,12 +229,20 @@ class Graph():
         # edge_index, edge_attr = to_undirected(edge_index,edge_attr)
         self.data = Data(edge_index=edge_index,edge_attr=edge_attr)
         self.data.node_id = node_ID
-        print(f'self.data.node_id: {self.data.node_id}')
+        # print(f'self.data.node_id: {self.data.node_id}')
         # import torch_geometric.transforms as T
         # self.data = T.ToUndirected()(data)
-        print()
-        print(f'----- Graph Propeties -----')
-        print(f'-- number of accuracy & transferability edge: {edge_index_accu_model_to_dataset.shape}, {edge_index_tran_model_to_dataset.shape}, {edge_index_dataset_to_dataset.shape}')
-        print(f'-- max node index: {torch.max(edge_index_accu_model_to_dataset),0}, {torch.max(edge_index_tran_model_to_dataset),0},{torch.max(edge_index_dataset_to_dataset),0}')
-        print(f'-- number of nodes: {self.data.num_nodes}, number of edges: {self.data.num_edges}')
-        print(f'-- data is directed(): {self.data.is_directed()}')
+        try:
+            print()
+            print(f'----- Graph Properties -----')
+            print(self.data)
+            # print(self.data.edge_index)
+            print(f'-- number of accuracy & transferability edge: {edge_index_accu_model_to_dataset.shape}, {edge_index_tran_model_to_dataset.shape}, {edge_index_dataset_to_dataset.shape}')
+            # print(f'-- max accu index: {torch.max(edge_index_accu_model_to_dataset),0}')
+            # print(f'-- max tran index  {torch.max(edge_index_tran_model_to_dataset),0}')
+            # print(f'-- max dataset index: {torch.max(edge_index_dataset_to_dataset),0}')
+            print(f'-- number of nodes: {self.data.num_nodes}')
+            print(f' number of edges: {self.data.num_edges}')
+            print(f'-- data is directed(): {self.data.is_directed()}')
+        except Exception as e:
+            print(e)

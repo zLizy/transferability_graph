@@ -1,5 +1,6 @@
-from torch_geometric.nn import SAGEConv,GATConv, GraphConv, GCNConv, HGTConv,to_hetero,Linear, HeteroConv
+from torch_geometric.nn import GraphSAGE, SAGEConv,GATConv, GraphConv, GCNConv, HGTConv,to_hetero,Linear, HeteroConv
 import torch.nn.functional as F
+import torch.nn as nn
 import torch
 from torch import Tensor
 from torch_geometric.data import HeteroData
@@ -32,10 +33,12 @@ class EebedGNN(torch.nn.Module):
         # raise NotImplementedError
 
 class SAGENN(torch.nn.Module):
-    def __init__(self, hidden_channels):
+    def __init__(self, hidden_channels,add_regression_layer=True):
         super().__init__()
         self.conv1 = SAGEConv((-1, -1), hidden_channels)
         self.conv2 = SAGEConv((-1,-1), hidden_channels)
+        self.add_regression_layer = add_regression_layer
+        self.hidden_channels = hidden_channels
 
     def forward(self, x, edge_index) -> Tensor: #: Tensor
         x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
@@ -147,6 +150,8 @@ class HeteroModel(torch.nn.Module):
             self.gnn = GCN(hidden_channels)
         elif 'HeteroGNN' in self.gnn_method:
             self.gnn = HeteroGNN(hidden_channels)
+        elif 'GraphSAGE' in self.gnn_method:
+            self.gnn = GraphSAGE(hidden_channels,hidden_channels)
 
         # Convert GNN model into a heterogeneous variant:
         if ('HGTConv' not in self.gnn_method) and ('HeteroGNN' not in self.gnn_method) and ('homo' not in self.gnn_method):
@@ -218,17 +223,6 @@ class HeteroModel(torch.nn.Module):
         )
         return pred
     
-
-class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels):
-        super().__init__()
-        self.conv1 = GCNConv(-1, hidden_channels,add_self_loops=False)
-        self.conv2 = GCNConv(-1, hidden_channels,add_self_loops=False)
-
-    def forward(self, x, edge_index) -> Tensor: #: Tensor
-        x = F.relu(self.conv1(x, edge_index)) #+ self.lin1(x)
-        x = self.conv2(x, edge_index) #+ self.lin2(x)
-        return x
     
 class HomoModel(torch.nn.Module):
     def __init__(
@@ -254,8 +248,13 @@ class HomoModel(torch.nn.Module):
             self.gnn = GCN(hidden_channels)
         elif 'HeteroGNN' in self.gnn_method:
             self.gnn = HeteroGNN(hidden_channels)
+        # elif 'GraphSAGE' in self.gnn_method:
+        #     self.gnn = GraphSAGE(hidden_channels,hidden_channels,num_layers=2)
 
-        self.classifier = HomoClassifier()
+        if 'lr' in self.gnn_method or 'rf' in self.gnn_method:
+            self.classifier = HomoClassifier()
+        elif 'e2e' in self.gnn_method:
+            self.classifier = HomoRegression(hidden_channels)
         self.flag = True
 
     def forward(self, data) -> Tensor:
@@ -265,8 +264,8 @@ class HomoModel(torch.nn.Module):
             if not contain_attr:
                 data.edge_attr_dict = None
             self.x_dict = self.gnn(data.x,data.edge_index,data.edge_attr)#(x_dict, data.edge_index_dict)
-        elif self.gnn_method == 'GraphConv' or self.gnn_method == 'GCNConv':
-            self.x_dict = self.gnn(data.x,data.edge_index)#(x_dict, data.edge_index_dict)
+        # elif self.gnn_method == 'GraphConv': # or self.gnn_method == 'GCNConv':
+        #     self.x_dict = self.gnn(data.x,data.edge_index)#(x_dict, data.edge_index_dict)
         else:
             self.x_dict = self.gnn(data.x,data.edge_index)#(x_dict, data.edge_index_dict)
 
@@ -341,5 +340,26 @@ class HomoClassifier(torch.nn.Module):
         # Apply dot-product to get a prediction per supervision edge:
         return (edge_feat_model * edge_feat_dataset).sum(dim=-1)
         # return torch.sigmoid((edge_feat_model * edge_feat_dataset).sum(dim=-1))
+
+class HomoRegression(torch.nn.Module):
+    def __init__(self,hidden_channels):
+        super(HomoRegression, self).__init__()
+        self.fc1 = nn.Linear(hidden_channels*2, hidden_channels)
+        self.fc2 = nn.Linear(hidden_channels, 1)
+
+    def forward(self, x, edge_label_index: Tensor) -> Tensor:
+        # Convert node embeddings to edge-level representations:
+        # print(f'\nedge_label_index.shape:{edge_label_index.shape}')
+        edge_feat_model = x[edge_label_index[0]]
+        edge_feat_dataset= x[edge_label_index[1]]
+
+        x = self.fc1(torch.cat([edge_feat_model,edge_feat_dataset],dim=1))
+        x = F.relu(x)
+        x = self.fc2(x)
+        output = torch.flatten(torch.sigmoid(x))
+        return output
+
+        # Apply dot-product to get a prediction per supervision edge:
+        # return (edge_feat_model * edge_feat_dataset).sum(dim=-1)
 
 

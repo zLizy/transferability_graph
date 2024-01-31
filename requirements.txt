@@ -1,17 +1,17 @@
-pandas
-numpy
-transformers
 datasets
-seqeval
-evaluate
-scipy
-tqdm
-numba
-eland
-sentence_transformers
-pynvml
-accelerate
-task_adaptation==0.1
+huggingface-hub
+keras==2.13.1
+networkx
+nltk==3.8.1
+numpy==1.24.3
+protobuf==4.24.4
+task-adaptation==0.1
+tfds-nightly==4.9.2.dev202308020032
+tokenizers
+torch
+torchaudio==2.0.2
+torchvision==0.15.2
+transformers==4.33.2
 # bitsandbytes
 # parallelformers
 # pytorch-lightning

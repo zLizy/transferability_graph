@@ -21,7 +21,6 @@ movie_user_example.py
 *.csv
 *.png
 
-LogMe/
 
 graph/data/
 graph/datasets/

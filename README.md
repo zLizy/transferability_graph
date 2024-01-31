@@ -7,6 +7,7 @@ In this study, we introduce **TransferGraph**, a novel framework that reformulat
 
 ## Instructions
 ### Data preparation
+* Collect metadata (dataset, model), e.g., attributes, performance. The files are under `doc/`
 * Obtain **Transferability score** - **LogMe**.
 ```console
   python3 ./LogMe/LogMe.py

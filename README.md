@@ -41,17 +41,17 @@ We vary the configurations for experiments. To run experiments, use `run_graph.s
 ```python
 ./run_graph.sh
 ```
-**Confugurations**
-contain_dataset_feature - whether include dataset features as node features
-gnn_method - GNN algorithms to learn from a graph
-test_dataset - the dataset that models fine-tuned on
-top_neg_K - the percentage of the models with the lowest transerability score
-top_pos_K - the percentage of the models with the highest transerability score
-accu_neg_thres - the percentage of the least performing models regarded as negative edges in a graph
-accu_pos_thres - the percentage of the highest performing models regarded as negative edges in a graph
-hidden_channels - dimension of the latent representations (e.g., 128)
-finetune_ratio - the amount of fine-tuning history used to train the GNN
-dataset_embed_method - method to extract latent representation of datasets
+### Confugurations
+* contain_dataset_feature - whether include dataset features as node features
+* gnn_method - GNN algorithms to learn from a graph
+* test_dataset - the dataset that models fine-tuned on
+* top_neg_K - the percentage of the models with the lowest transerability score
+* top_pos_K - the percentage of the models with the highest transerability score
+* accu_neg_thres - the percentage of the least performing models regarded as negative edges in a graph
+* accu_pos_thres - the percentage of the highest performing models regarded as negative edges in a graph
+* hidden_channels - dimension of the latent representations (e.g., 128)
+* finetune_ratio - the amount of fine-tuning history used to train the GNN
+* dataset_embed_method - method to extract latent representation of datasets
 
 
 

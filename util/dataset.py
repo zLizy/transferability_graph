@@ -15,9 +15,12 @@ import random
 import collections
 import torchvision.transforms as transforms
 import os
+import gc
 import json
 import numpy as np
+import pandas as pd
 import torch
+from tqdm.auto import tqdm
 
 from util.tfds import VTABIterableDataset
 from torch.utils.data import DataLoader
@@ -105,27 +108,34 @@ def _get_torch_ds(tfds_dataset,transform,classes,batch_size=1):
 
 def tfds2tvds(ds,input_shape):
         ## Convert tfds to torchvision dataset
-        print('is tfds dataset type')
-        batch_size = 1
         transform = transforms.Compose([
                             transforms.ToPILImage(),
                             transforms.Resize((input_shape,input_shape)),
                             transforms.ToTensor(),
+                            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
                         ])
+
         iterator = ds.get_tf_data('train', batch_size=1, epochs=1, for_eval=True)# self.batch_size = 1
         inputs = []
         labels = []
+        progress_bar = tqdm(range(len(iterator)))
+        progress_bar.set_description(f"Converting TensorFlow dataset to PyTorch dataset")
+
         for data in iterator:
             image = data['image'].numpy()
             shape = image.shape
             image = np.reshape(image,(shape[1],shape[2],shape[3]))
             inputs.append(transform(image))
             labels.append(data['label'].numpy())
+            progress_bar.update(1)
         # Generate torchvision dataset
         from torch.utils.data import TensorDataset
+        gc.collect()
+        torch.cuda.empty_cache()
         ds = TensorDataset(torch.stack(inputs),torch.from_numpy(np.stack(labels).reshape(len(labels))))
         print(f'tf_data: {type(ds)}')
-        torch.cuda.empty_cache()
+
         return ds
 
 def _get_mnist_transforms(augment=True, invert=False, transpose=False):
@@ -344,7 +354,7 @@ def cifar10_mnist(root, config):
 @_add_dataset
 def stanfordcars(root,input_shape=224):
     from torchvision.datasets import StanfordCars
-    transform, _ = _get_transforms(input_shape,augment=False)
+    transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
     train_dataset = StanfordCars(root=root, split="train", transform=transform, download=True)
     test_dataset = StanfordCars(root=root, split="test", transform=transform, download=True)
     return train_dataset, test_dataset, 'tvds'
@@ -356,7 +366,7 @@ def dtd(root,input_shape=224):
     classes = tfds_dataset._dataset_builder.info.features['label'].names
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     tfds_dataset.classes = classes
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
     # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
@@ -382,7 +392,7 @@ def flowers(root,input_shape=224):
 @_add_dataset
 def oxford_flowers102(root,input_shape=224):
     from task_adaptation.data.oxford_flowers102 import OxfordFlowers102Data
-    transform, _ = _get_transforms(augment=False,input_shape=input_shape)
+    transform, _ = _get_transforms(augment=False,input_shape=input_shape,normalize=True)
     tfds_dataset = OxfordFlowers102Data(data_dir=root)
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     classes = _load_classnames()["flowers"]
@@ -408,14 +418,14 @@ def oxford_iiit_pet(root,input_shape=224):
 @_add_dataset
 def dmlab(root,input_shape=224):
     from task_adaptation.data.dmlab import DmlabData
-    transform, _ = _get_transforms(input_shape,augment=False)
+    transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
     from util.tfds import download_tfds_dataset
     download_tfds_dataset("dmlab", data_dir=root) # it's not called in the original VTAB code, so we do it explictly
     tfds_dataset = DmlabData(data_dir=root)
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     classes = _load_classnames()["dmlab"]
     tfds_dataset.classes = classes
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
     # return _get_torch_ds(tfds_dataset,transform=transform,classes=_load_classnames('dmlab'))
 
 @_add_dataset
@@ -431,7 +441,7 @@ def resisc45(root,input_shape=224):
     classes = tfds_dataset._dataset_builder.info.features['label'].names
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     tfds_dataset.classes = classes
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
 
 @_add_dataset
 def clevr_count(root,input_shape=224):
@@ -453,7 +463,7 @@ def clevr_distance(root,input_shape=224):
 
 
 def clevr(root,task,input_shape=224):
-    transform, _ = _get_transforms(input_shape,augment=False)
+    transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
     from task_adaptation.data.clevr import CLEVRData
     # task = _extract_task(dataset_name)
     assert task in ("count_all", "closest_object_distance")
@@ -471,25 +481,24 @@ def clevr(root,task,input_shape=224):
     # # randomly sample MAX_NUM_SAMPLES
     # tfds_dataset= torch.utils.data.Subset(tfds_dataset, idx)
     tfds_dataset.classes = tfds_dataset 
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
     # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
 
 @_add_dataset
 def svhn(root,input_shape=224):
-    from task_adaptation.data.svhn import SvhnData
-    tfds_dataset = SvhnData(data_dir=root)
-    classes =_load_classnames()["svhn"]
-    tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
-    tfds_dataset.classes = classes
-    # transform, _ = _get_transforms(augment=False)
-    return tfds_dataset, '', 'tfds'
-    # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+    from torchvision.datasets import SVHN
+    transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
+    train_dataset = SVHN(root=root, split="train", transform=transform, download=True)
+    test_dataset = SVHN(root=root, split="test", transform=transform, download=True)
+    train_dataset.classes = _load_classnames()['svhn']
+    return train_dataset, test_dataset, 'tvds'
 
 @_add_dataset
 def smallnorb_label_azimuth(root,input_shape=224):
     task = _extract_task('smallnorb_label_azimuth')
     return smallnorb(root,task,input_shape)
 
+@_add_dataset
 def smallnorb_label_elevation(root,input_shape=224):
     task = _extract_task('smallnorb_label_elevation')
     return smallnorb(root,task,input_shape)
@@ -523,8 +532,12 @@ def dsprites(root,task,input_shape,transform=None):
     # transform, _ = _get_transforms(augment=False)
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     tfds_dataset.classes = classes
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
     # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
+
+@_add_dataset
+def kitti_closest_vehicle_distance(root,input_shape=224):
+    return kitti(root,input_shape)
 
 @_add_dataset
 def kitti(root,input_shape=224):
@@ -571,7 +584,7 @@ def caltech101(root,input_shape=224):
     # transform, _ = _get_transforms(augment=False)
     tfds_dataset = tfds2tvds(tfds_dataset,input_shape)
     tfds_dataset.classes = classes
-    return tfds_dataset, tfds_dataset, 'tfds'
+    return tfds_dataset, '', 'tfds'
     # tfds_dataset = tfds_dataset.get_tf_data('train', batch_size=64, epochs=1, for_eval=True)
     # return tfds_dataset._dataset_builder.as_dataset(split='train'),tfds_dataset._dataset_builder.as_dataset(split='test'),'tfds'
     # return _get_torch_ds(tfds_dataset,transform=transform,classes=classes)
@@ -601,8 +614,8 @@ def cifar10(root,input_shape=224):
         transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ])
     trainset = CIFAR10(root, train=True, transform=transform, download=True)
-    testset = CIFAR10(root, train=False, transform=transform)
-    return trainset, testset, 'tvds'
+    # testset = CIFAR10(root, train=False, transform=transform)
+    return trainset, '', 'tvds'
 
 
 @_add_dataset
@@ -614,22 +627,29 @@ def cifar100(root,input_shape=224):
         transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ])
     trainset = CIFAR100(root, train=True, transform=transform, download=True)
+    # testset = CIFAR100(root, train=False, transform=transform, download=True)
     return trainset, '', 'tvds'
 
 @_add_dataset
-def pcam(root,input_shape=224):
-    from torchvision.datasets import PCAM
+def coco_detection(root,input_shape=224):
+    from torchvision.datasets import CocoDetection
     transform = transforms.Compose([
         transforms.Resize((input_shape,input_shape)),
         transforms.ToTensor(),
         transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ])
-    trainset =  PCAM(root=root, split="train", transform=transform, download=True)
-    testset =  PCAM(root=root, split="test", transform=transform, download=True)
-    classes = _load_classnames()["pcam"]
-    trainset.classes = classes
-    testset.classes = classes
-    return trainset, testset, 'tvds'
+    trainset = CocoDetection(root, transform=transform)
+
+    return trainset, '', 'tvds'
+
+@_add_dataset
+def pcam(root,input_shape=224):
+    from torchvision.datasets import PCAM
+    transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
+    train_dataset = PCAM(root=root, split="train", transform=transform, download=True)
+    test_dataset = PCAM(root=root, split="test", transform=transform, download=True)
+    train_dataset.classes = _load_classnames()['pcam']
+    return train_dataset, test_dataset, 'tvds'
 
 
 @_add_dataset
@@ -675,9 +695,9 @@ def food101(root,input_shape=224):
     from torchvision.datasets import Food101
     transform, _ = _get_transforms(input_shape,augment=False,normalize=True)
     trainset = Food101(root, split='train', transform=transform, download=True)
-    testset = Food101(root, split='test', transform=transform)
+    # testset = Food101(root, split='test', transform=transform)
     # self.classes exist
-    return trainset, testset, 'tvds'
+    return trainset, '', 'tvds'
 
 @_add_dataset
 def kmnist(root):
@@ -760,6 +780,18 @@ def hfpics(root,classes,input_shape=224):
     from util._dataset.huggingfacepics import get_huggingfacepics_data_set_by_all_search_term
     return get_huggingfacepics_data_set_by_all_search_term(root,classes,transform=_get_transform(input_shape))
 
+
+
+
+@_add_dataset
+def glue(root,classes,tokenizer):
+    data = load_dataset('glue',classes,split='train')
+    print(data)
+    data = data.map(lambda e: tokenizer(e['sentence'], truncation=True, padding='max_length'), batched=True)
+    tokenized_data = data.remove_columns(["idx","label","sentence"])
+    # data.set_format(type='torch', columns=['input_ids', 'token_type_ids', 'attention_mask', 'label'])
+    return tokenized_data
+
 #### HuggingFace Datasets
 
 def hfds2tvds(ds,input_shape=224):
@@ -802,17 +834,17 @@ def beans(root,input_shape=224):
     train_dataset = load_dataset('beans', split='train')
     # train_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
     train_dataset = hfds2tvds(train_dataset,input_shape)    
-    test_dataset = load_dataset('beans', split='test')
-    test_dataset = hfds2tvds(test_dataset,input_shape)    
-    return train_dataset, test_dataset,'hfds'
+    # test_dataset = load_dataset('beans', split='test')
+    # test_dataset = hfds2tvds(test_dataset,input_shape)    
+    return train_dataset, '','hfds'
 
 @_add_dataset
 def keremberke_pokemon_classification(root,input_shape=224):
     train_dataset = load_dataset('keremberke/pokemon-classification', name='full')['train']
     train_dataset = hfds2tvds(train_dataset,input_shape) 
-    test_dataset = load_dataset('keremberke/pokemon-classification', name='mini')['test']
-    test_dataset = hfds2tvds(test_dataset,input_shape) 
-    return train_dataset, test_dataset,'hfds'
+    # test_dataset = load_dataset('keremberke/pokemon-classification', name='mini')['test']
+    # test_dataset = hfds2tvds(test_dataset,input_shape) 
+    return train_dataset, '','hfds'
 
 @_add_dataset
 def poolrf2001_facemask(root,input_shape=224):
@@ -839,6 +871,26 @@ def fastjobs_visual_emotional_analysis(root,input_shape=224):
     return train_dataset, '','hfds'
 
 @_add_dataset
+def toxicity(root):
+    import spacy
+    
+    train_df = pd.read_csv(f'{root}/datasets/toxic/train.csv')
+    labels_df = train_df[['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']]
+    nlp = spacy.load('en_core_web_sm')
+    train_df['cleaned_text'] = train_df['comment_text'].apply(clean_text)
+    # X_train, X_test, y_train, y_test = train_test_split(comment_texts, target_labels, test_size=0.2, random_state=42)
+    X_train = torch.from_numpy(X_train).to(torch.float32)
+    y_train = torch.from_numpy
+    pass
+
+def clean_text(text):
+    doc = nlp(text)
+    tokens = [token.lemma_ for token in doc if not token.is_stop and not re.match(r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])', token.text) and token.is_alpha]
+    cleaned_text = ' '.join(tokens)
+    return cleaned_text
+
+
+@_add_dataset
 def chest_xray_classification(root,input_shape=224):
     train_dataset = load_dataset('keremberke/chest-xray-classification', name='full')['train']
     # train_dataset.set_format(type='torch', columns=['image_file_path','image','labels'])
@@ -862,7 +914,7 @@ def get_dataset(root,dataset_name,input_shape=224,splits=[''],return_classes=Fal
         length = len(raw_ds)
     except:
         length = raw_ds.get_num_samples('train')
-    LEN = min(length,5000)
+    LEN = length #min(length,500000)
     print(f'dataset size: {length}')
     print(type(raw_ds))
 
@@ -877,20 +929,13 @@ def get_dataset(root,dataset_name,input_shape=224,splits=[''],return_classes=Fal
         torch.cuda.empty_cache()
         print(f'split: {spl}')
         if spl == '':
-            idx = random.sample(range(length), k=LEN)
-            ds = torch.utils.data.Subset(raw_ds, idx)
-        elif spl == ':800':
-            # ds = ds.select(range(min(800,LEN)))
-            # ds = torch.utils.data.Subset(ds, range(min(800,LEN))) # 800
-            idx = random.sample(range(length), k=int(length*0.5) )# min(int(length*0.2),8000))
-            # idx = random.sample(range(length), k=8000) 
-            ds = torch.utils.data.Subset(raw_ds, idx)
-        elif spl == '800:1000':
-            # ds = torch.utils.data.Subset(ds, range(min(800,LEN)-200,min(800,LEN)))
-            idx = random.sample(range(length), k=2000)
-            ds = torch.utils.data.Subset(raw_ds, idx)
-        elif spl == ':100%':
-            ds = torch.utils.data.Subset(raw_ds, range(min(500,LEN)))
+            ds = raw_ds
+        elif spl == ':0.7':
+            ds = torch.utils.data.Subset(raw_ds, range(int(LEN*0.7))) # 800
+        elif spl == '0.7:0.9':
+            ds = torch.utils.data.Subset(raw_ds, range(int(LEN*0.7),int(LEN*0.9)))
+        elif spl == '0.7:1':
+            ds = torch.utils.data.Subset(raw_ds, range(int(LEN*0.7),LEN))
         data.append(ds)
     print(f'len(data_sets): {len(data)}')
     if return_classes:
@@ -910,7 +955,7 @@ def get_dataloader(root,dataset_name,data_sets=[],input_shape=224,batch_size=16,
         dataloader = DataLoader(
                     data,
                     batch_size=batch_size, # may need to reduce this depending on your GPU 
-                    num_workers=8, # may need to reduce this depending on your num of CPUs and RAM
+                    num_workers=1, # may need to reduce this depending on your num of CPUs and RAM
                     shuffle=False,
                     drop_last=False,
                     pin_memory=True

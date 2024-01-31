@@ -6,4 +6,13 @@ In this study, we introduce **TransferGraph**, a novel framework that reformulat
 ![image](https://github.com/zLizy/transferability_graph/blob/main/img/overview.jpg)
 
 ## Instructions
-### 
+### Data preparation
+* Obtain **Transferability score** - **LogMe**
+  * ```python
+    python3 ./LogMe/LogMe.py
+    ```   
+*  Run **TransferGraph** to map model-dataset relationships in a graph and use GNN to train node representations.
+  *```shell
+   cd graph
+   ./run_graph.sh
+   ``` 

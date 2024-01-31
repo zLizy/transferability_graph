@@ -13,9 +13,12 @@ In this study, we introduce **TransferGraph**, a novel framework that reformulat
 ## Instructions
 ### Data preparation
 * Collect metadata (dataset, model), e.g., attributes, performance. The files are under `doc/`
-* Obtain **Transferability score** - **LogMe**.
+* Obtain **Transferability score** - **LogME**.
 ```console
-  python3 ./LogMe/LogMe.py
+cd LogME
+DATASET_NAME=pets
+METHOD=LogME
+python3 compute.py --dataset_name ${DATASET_NAME} --method=${METHOD}
 ```   
 *  Run **TransferGraph** to map model-dataset relationships in a graph and use GNN to train node representations.
 ```console

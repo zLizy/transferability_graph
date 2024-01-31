@@ -19,9 +19,12 @@ cd LogME
 DATASET_NAME=pets
 METHOD=LogME
 python3 compute.py --dataset_name ${DATASET_NAME} --method=${METHOD}
-```   
+```
+### Obtain model and dataset features by graph learning   
 *  Run **TransferGraph** to map model-dataset relationships in a graph and use GNN to train node representations.
 ```console
 cd graph
 ./run_graph.sh
-``` 
+```
+### Learn a simple machine learning model, e.g., linear regression, to predict model performance using the features along with other metadata.
+

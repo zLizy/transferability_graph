@@ -486,13 +486,13 @@ def main(args):
     batch_size = 4
 
     if args.gnn_method == 'node2vec':
-        from utils.get_node2vec_features import node2vec_train
+        from heterogeneous_graph.graph.methods.train_with_node2vec import node2vec_train
         node2vec_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
     elif args.gnn_method == '""':
         from utils.basic import get_basic_features
         get_basic_features(args.test_dataset,data_dict,setting_dict)
     elif args.gnn_method != '""':
-        from train_with_GNN import gnn_train
+        from heterogeneous_graph.graph.methods.train_with_GNN import gnn_train
         gnn_train(args,df_perf,data_dict,evaluation_dict,setting_dict,batch_size)
     
     # model_scripted = torch.jit.script(model) # Export to TorchScript

@@ -14,11 +14,11 @@ class GraphAttributes():
     PRINT = True
     FEATURE_DIM = 2048 #768 #2048
     dataset_map = {
-        # 'oxford_flowers102': 'flowers',
+        'oxford_flowers102': 'flowers',
         'svhn_cropped': 'svhn',
         'dsprites':['dsprites_label_orientation','dsprites_label_x_position'],
         'smallnorb':['smallnorb_label_azimuth','smallnorb_label_elevation'],
-        # 'oxford_iiit_pet': 'pets',
+        'oxford_iiit_pet': 'pets',
         'patch_camelyon': 'pcam',
         'clevr':["count_all", "count_left", "count_far", "count_near", 
             "closest_object_distance", "closest_object_x_location", 
@@ -36,16 +36,19 @@ class GraphAttributes():
         self.unique_model_id, self.unique_dataset_id = self.get_node_id()
         
         # get dataset-dataset edge index
-        if args.dataset_reference_model == 'resnet50' or args.dataset_reference_model == 'google_vit_base_patch16_224':
+        if args.dataset_reference_model == 'resnet34' or args.dataset_reference_model == 'google_vit_base_patch16_224':
             self.base_dataset = 'imagenet'
         elif args.dataset_reference_model == 'Ahmed9275_Vit-Cifar100':
             self.base_dataset = 'cifar100'
         elif args.dataset_reference_model == 'johnnydevriese_vit_beans':
             self.base_dataset = 'beans'
+        else:
+            self.base_dataset = 'imagenet'
 
 
     def get_dataset_edge_index(self,threshold=0.3,base_dataset='imagenet',sim_method='cosine'):
-        n = self.data_features.shape[0]
+        n = len(self.data_features)
+        # n = self.data_features.shape[0]
         # print(f'len(dataset_features):{n}')
         # print(f'emb_method: {self.args.dataset_embed_method}')
 
@@ -54,24 +57,35 @@ class GraphAttributes():
         data_target = []
         attr = []
         # print(features)
-        for i, e1 in enumerate(self.data_features):
+        # print(f'\ndata_features:{self.data_features.keys()}')
+        # print(self.dataset_list,'\n')
+        for i, row in self.unique_dataset_id.iterrows():
+        # for i, e1 in self.data_features.values :#enumerate(self.data_features):
+            e1 = self.data_features[row['dataset']]
             if sim_method == 'correlation':
                 similarity = distance.correlation(e1,e1) #cosine(e1,e1) #1 - distance.cosine(e1,e1)
             elif sim_method == 'euclidean':
                 similarity = distance.euclidean(e1,e1)
             # print(f'similarity: {similarity}')
             distance_matrix[i,i] = similarity
-        for (i, e1), (j, e2) in itertools.combinations(enumerate(self.data_features), 2):
+        for (i, row1), (j, row2) in itertools.combinations(self.unique_dataset_id.iterrows(), 2):
+            k1 = row1['dataset']
+            p = row1['mappedID']
+            k2 = row2['dataset']
+            q = row2['mappedID']
+            e1 = self.data_features[k1]
+            e2 = self.data_features[k2]
             if sim_method == 'correlation':
                 similarity = distance.correlation(e1,e1) #cosine(e1,e1) #1 - distance.cosine(e1,e1)
             elif sim_method == 'euclidean':
                 similarity = distance.euclidean(e1,e2)
             # similarity = kl(e1,e2)
-            distance_matrix[i, j] = similarity
-            distance_matrix[j, i] = similarity
+            
+            distance_matrix[p, q] = similarity
+            distance_matrix[q, p] = similarity
             if threshold == -1 or similarity < threshold:
-                data_source.append(i)
-                data_target.append(j)
+                data_source.append(p)
+                data_target.append(q)
                 attr.append(1-similarity) ## distance (smaller the better); similarity (higher the better ~ accuracy)
             # if similarity < threshold:
             # if i == 0:
@@ -81,39 +95,52 @@ class GraphAttributes():
 
         ## Filter distance with top K
 
-        if not os.path.exists(f'../doc/corr_{self.args.dataset_embed_method}_{self.args.dataset_reference_model}_{base_dataset}.csv'):
+        path = f'../doc/corr_{self.args.dataset_embed_method}_{self.args.dataset_reference_model}_{base_dataset}.csv'
+        if not os.path.exists(path):
             # if True:
             dict_distance = {}
-            for i,name in enumerate(self.unique_dataset_id['dataset'].values):#
+            for i,row in self.unique_dataset_id.iterrows():#
             # for i,name in enumerate(unique_dataset_id['classname_name'].values):
-                dict_distance[name] = list(distance_matrix[i,:])
+                name = row['dataset']
+                idx = row['mappedID']
+                dict_distance[name] = list(distance_matrix[idx,:])
             df_tmp = pd.DataFrame(dict_distance)
             df_tmp.index = df_tmp.columns
-            df_tmp.to_csv(f'../doc/corr_{self.args.dataset_embed_method}_{self.args.dataset_reference_model}_{base_dataset}.csv')# _class
+            print('df_tmp.head()')
+            print(df_tmp.head())
+            print('\n\n ====  Save correlation to path: {path}')
+            df_tmp.to_csv(path)# _class
+            
+        else:
+           print(f'\n\n ====  Correlation to path exist: {path}\n')
         # data_source = np.asarray(data_source)
         # data_target = np.asarray(data_target)
         print(f'len(connected_dataset):{len(data_source)}')
         return torch.stack([torch.tensor(data_source), torch.tensor(data_target)]), torch.tensor(attr) #dim=0
 
     def get_edge_index(self,method='accuracy',ratio=1.0): # method='score'
-        # if ratio != 1:
-        #     df = df.sample(frac=ratio, random_state=1)
+        
         if method == 'accuracy':
-            df = self.finetune_records.copy()
+            if 'without_accuracy' in self.args.gnn_method:
+                df = self.model_config.copy()
+            else:
+                df = self.finetune_records.copy()
             df['mean'] = df.groupby('dataset')['accuracy'].transform(lambda x: x.mean())
             df_neg = df[df['accuracy']<=self.args.accu_neg_thres]#df['mean']]
             if self.args.accu_pos_thres == -1:
                 df = df[df['accuracy']> df['mean']]
             else:
                 df = df[df['accuracy']> self.args.accu_pos_thres]
+            print(f'df_accu after filtering: {len(df)}')
             # df = df[df['accuracy']>=self.args.accuracy_thres]
         elif method == 'score':
             df, df_neg = self.get_transferability_scores()
-            #if self.args.gnn_method == 'node2vec':
-            # df['mean'] = df.groupby('dataset')['score'].transform(lambda x: x.mean())
-            # df_neg = df[df['score']<=df['mean']]
-            # df = df[df['score']>=df['mean']]
-            # print(f'df_neg: {df_neg}')
+
+            #### Sample transferability score with finetune-ratio
+            # 'without_accuracy' in self.args.gnn_method and 
+            if ratio != 1:
+                df = df.sample(frac=self.args.finetune_ratio, random_state=1)
+
         
         edge_index_model_to_dataset, edge_attributes = self.get_edges(df,method,type='positive')
         negative_edges, _ = self.get_edges(df_neg,method,type='negative')
@@ -124,20 +151,25 @@ class GraphAttributes():
         print()
         print('==========')
         # print(f'len(df): {len(df)}')
-        print(f'len(df) after filtering models by {method}: {len(df)}')
-        mapped_model_id = pd.merge(df['model'],self.unique_model_id,on='model',how='left')['mappedID'].values# how='left
-        mapped_dataset_id = pd.merge(df['dataset'],self.unique_dataset_id,on='dataset',how='left')['mappedID'].values
+        print(f'\nlen(df) after filtering models by {method}, {type}: {len(df)}')
+        mapped_dataset_id = pd.merge(df[['dataset','model',method]],self.unique_dataset_id,on='dataset',how='inner')
+        mapped_model_id = pd.merge(mapped_dataset_id[['dataset','model',method]],self.unique_model_id,on='model',how='inner')# how='left
         print(f'mapped_model_id.len: {len(mapped_model_id)}, mapped_dataset_id.len: {len(mapped_dataset_id)}')
-        edge_index_model_to_dataset = torch.stack([torch.from_numpy(mapped_model_id), torch.from_numpy(mapped_dataset_id)], dim=0)
+        # print(f'mapped_model_id: {mapped_model_id}')
+        # print(f"df['dataset]: {pd.merge(df['dataset'],self.unique_dataset_id,on='dataset',how='left')}")
+        # print(f'mapped_dataset_id: {mapped_dataset_id}')
+        edge_index_model_to_dataset = torch.stack([torch.from_numpy(mapped_model_id['mappedID'].values), torch.from_numpy(mapped_dataset_id['mappedID'].values)], dim=0)
         # if type == 'positive':
         #     edge_index_model_to_dataset = torch.stack([torch.from_numpy(mapped_model_id), torch.from_numpy(mapped_dataset_id)], dim=0)
         if type == 'negative':
-            edge_index_model_to_dataset = torch.stack([torch.from_numpy(mapped_model_id), torch.from_numpy(mapped_dataset_id)], dim=1)
+            edge_index_model_to_dataset = torch.stack([torch.from_numpy(mapped_model_id['mappedID'].values), torch.from_numpy(mapped_dataset_id['mappedID'].values)], dim=1)
         # print(f'== edge_index_model_to_dataset')
-        edge_attr = torch.from_numpy(df[method].values)
+        print(f'len(df): {len(df)}, len(mapped_model_id): {len(mapped_model_id)}')
+        edge_attr = torch.from_numpy(mapped_model_id[method].values)
         # print()
         # print(df)
-        # print(f'edge_attr: {edge_attr}')
+        print(f'\nedge_index: {edge_index_model_to_dataset.shape}')
+        print(f'edge_attr: {edge_attr.shape}')
         return edge_index_model_to_dataset, edge_attr
 
     def del_node(self,unique_id,entity_list,entity_type):
@@ -220,8 +252,8 @@ class GraphAttributes():
             try:
                 features = np.load(path)
             except Exception as e:
-                print('----------')
-                print(e)
+                # print('----------')
+                # print(e)
                 if complete_model_features:
                     print(f'== Skip this model and delete it')
                     # delete_model_row_idx.append(i)
@@ -241,8 +273,8 @@ class GraphAttributes():
                     features = embed('../',model_name,dataset_name,method,input_shape=IMAGE_SHAPE,batch_size=batch_size)
                     print('----------')
                 except Exception as e:
-                    print(e)
-                    print('----------')
+                    # print(e)
+                    # print('----------')
                     # features = np.zeros((3,INPUT_SHAPE,INPUT_SHAPE))
                     # delete_model_row_idx.append(i)
                     model_list.append(row['model'])
@@ -309,8 +341,8 @@ class GraphAttributes():
         unique_model_id = self.get_unique_node(self.finetune_records['model'],'model')
         unique_dataset_id = self.get_unique_node(self.finetune_records['dataset'],'dataset')
         print()
-        print(f"len(unique_model_id): {len(unique_model_id)}")
-        print(f'len(unique_dataset_id): {len(unique_dataset_id)}')
+        # print(f"len(unique_model_id): {len(unique_model_id)}")
+        # print(f'len(unique_dataset_id): {len(unique_dataset_id)}')
         return unique_model_id, unique_dataset_id
 
     def get_unique_node(self,col,name):
@@ -328,7 +360,8 @@ class GraphAttributes():
         df_list = []
         df_neg_list = []
         for ori_dataset_name, dataset_name in self.dataset_list.items():
-            df_sub = df[df['dataset']==ori_dataset_name]
+            df_sub = df[df['dataset']==dataset_name]
+            # print(f'\n ori_dataset_name: {ori_dataset_name}, dataset_name: {dataset_name}')
             try:
                 # path = f'../doc/{self.args.model_datset_edge_method}/scores/{dataset_name.replace(" ","-")}.csv'
                 path = f'baselines/LogME_scores/{dataset_name.replace(" ","-")}.csv'
@@ -336,14 +369,23 @@ class GraphAttributes():
                 df_score = pd.read_csv(path,index_col=0)
                 df_score = df_score[df_score['model']!='time']
                 
-                # normalize
+                # drop rows with -inf amount or replace it with really small number
+                df_score['score'].replace([-np.inf,np.nan], -50, inplace=True)
+
                 # norm = np.linalg.norm(df_score['score'].values)     # To find the norm of the array
                 # print(norm)                        # Printing the value of the norm
-                score = df_score['score']
-                normalized_pred = (score-score.min())/(score.max()-score.min()) #df_score['score'].values/norm 
+                # df_sub = df_score[['score','']]
+                # df.groupby('indx').transform(lambda x: (x - x.mean()) / x.std())
+                # print(f'\n{score.max()}, {score.min()}')
+                score = df_score['score'] #.astype('float64')
+                ##### Normalize
+                ## mean normalization
+                normalized_pred = (score-score.mean())/score.std()
+                ## min-max normalization
+                # normalized_pred = (score-score.min())/(score.max()-score.min()) #df_score['score'].values/norm 
+                # print(f'\normalized_score:{normalized_pred}')
+                
                 df_score['score'] = normalized_pred
-                # print('df_score')
-                # print(df_score.sort_values(['score'],ascending=False).head())
 
                 # top K = 20
                 # K = 50
@@ -355,35 +397,41 @@ class GraphAttributes():
                 # df_large = df_score
                 # print(df_large.head())
                 df_ = pd.merge(df_sub,df_large,on='model',how='left')
+                df_list.append(df_)
                 # print(f'df_')
                 # print(df_.sort_values(['score'],ascending=False).head())
 
                 # smallest
                 if self.args.top_neg_K <= 1:
-                    df_small = df_score[df_score['score']<=self.args.top_neg_K]
-                elif self.args.top_neg_K <= 1:
-                    df_small = df_score.nsmallest(self.args.top_neg_K,'score')
+                    df_small = df_score[df_score['score']<self.args.top_neg_K]
+                # print(df_small[['model','score']])
+                # elif self.args.top_neg_K <= 1:
+                #     df_small = df_score.nsmallest(self.args.top_neg_K,'score')
                 df_s = pd.merge(df_sub,df_small,on='model',how='left')
-
                 # print(df_)
-                df_list.append(df_)
+                # print(f'\ndf_list: {df_list}')
+                # print(df_s)
                 df_neg_list.append(df_s)
                 # if 'score' in df.columns: 
                 #     df = pd.merge(df,df_,on=['dataset','model','accuracy','score'],how='left')
                 # else:
                 #     df = pd.merge(df,df_,on=['dataset','model','accuracy'],how='left')
-            except:
-                df_list.append(df_sub)
-                # continue
+            except Exception as e:
+                # print(e)
+                # df_list.append(df_sub)
+                # df_neg_list.append(df_s)
+                continue
         
         df = pd.concat(df_list)
         # print(df.head())
-        df = df.dropna()
+        df = df.dropna(subset=['score'])
+        df.to_csv('../features/transferility.csv')
+
+        # print(f'df_neg: {df_neg_list}')
+
         if 'score' not in df.columns: df['score'] = 0
         df_neg = pd.concat(df_neg_list).dropna()
         
-        # print(f'df: {df}')
-        # print(f'df_neg: {df_neg}')
         
         return df, df_neg
         
@@ -393,8 +441,10 @@ class GraphAttributes():
         config = pd.read_csv(os.path.join(self.root,file))
         config['dataset'] = config['labels']
         config['configs'] = {}
-        config['accuracy'] = 0
+        # config['accuracy'] = 0
         available_models = config['model'].unique()
+        config = config.dropna(subset=['accuracy'])
+        self.model_config = config
 
         # finetune results
         finetune_records = pd.read_csv(os.path.join(self.root,self.record_path))
@@ -411,20 +461,38 @@ class GraphAttributes():
         ## Delete the finetune records of the test datset
         ######################
         finetune_records = finetune_records[finetune_records['dataset']!=self.args.test_dataset]
+
+
+        #### Sampling the finetune_records with samping ratio
+        if self.args.finetune_ratio != 1:
+            finetune_records = finetune_records.sample(frac=self.args.finetune_ratio, random_state=1)
+
+        # Normalize finetune results per dataset
+        accuracy = finetune_records[['dataset','accuracy']].groupby('dataset').transform(lambda x: (x - x.min()) / (x.max()-x.min()))
+        finetune_records['accuracy'] = accuracy
+        # print(f'\nfinetune_recoreds["accuracy"]: {accuracy}')
+        # print(f'\n min_accuracy: {accuracy.min()}, max: {accuracy.max()}')
+
+        # if 'without_accuracy' in self.args.gnn_method:
+        #     finetune_records = config
+        # else:
         finetune_records = pd.concat([ config[['dataset','model','input_shape','accuracy']],
                                         finetune_records[['dataset','model','input_shape','accuracy']]],
                                             ignore_index=True)
         
-        print(f'---- len(finetune_records_after_concatenating_model_config): {len(finetune_records)}')
+        
         finetune_records['config'] = ''
         # filter models that are contained in the config file
         finetune_records = finetune_records[finetune_records['model'].isin(available_models)]
+        print(f'---- len(finetune_records_after_concatenating_model_config): {len(finetune_records)}')
         
         # ######################
         # ## Add an empty row to indicate the dataset
         # ######################
         finetune_records.loc[len(finetune_records)] = {'dataset':self.args.test_dataset}
         finetune_records.index = range(len(finetune_records))
+
+        # self.finetune_records = finetune_records
         
         return finetune_records
 
@@ -472,16 +540,16 @@ class GraphAttributesWithDomainSimilarity(GraphAttributes):
         self.node_ID = list(self.model_idx) + list(self.unique_dataset_id['mappedID'].values)
 
         # get edge index
-        self.edge_index_accu_model_to_dataset, self.edge_attr_accu_model_to_dataset, self.accu_negative_pairs = self.get_edge_index(method='accuracy',ratio=args.finetune_ratio)#score
+        self.edge_index_accu_model_to_dataset, self.edge_attr_accu_model_to_dataset, self.accu_negative_pairs = self.get_edge_index(method='accuracy',ratio=args.finetune_ratio) #,ratio=args.finetune_ratio)#score
         
-        self.edge_index_tran_model_to_dataset, self.edge_attr_tran_model_to_dataset, self.tran_negative_pairs = self.get_edge_index(method='score',ratio=args.finetune_ratio)#score
+        self.edge_index_tran_model_to_dataset, self.edge_attr_tran_model_to_dataset, self.tran_negative_pairs = self.get_edge_index(method='score',ratio=args.finetune_ratio) #,ratio=args.finetune_ratio)#score
         if 'without_accuracy' in args.gnn_method or 'trained_on_transfer' in args.gnn_method:
             self.negative_pairs = self.tran_negative_pairs
         else:
             self.negative_pairs = self.accu_negative_pairs
-        print()
-        print('=========')
-        print(f'-- max node index: {torch.max(self.edge_index_accu_model_to_dataset),0}, {torch.max(self.edge_index_tran_model_to_dataset),0}')
+        # print()
+        # print('=========')
+        # print(f'-- max node index: {torch.max(self.edge_index_accu_model_to_dataset),0}, {torch.max(self.edge_index_tran_model_to_dataset),0}')
         
         self.dataset_reference_model = args.dataset_reference_model
         self.edge_index_dataset_to_dataset, self.edge_attr_dataset_to_dataset = self.get_dataset_edge_index(base_dataset=self.base_dataset,threshold=args.distance_thres,sim_method=args.dataset_distance_method)
@@ -490,25 +558,12 @@ class GraphAttributesWithDomainSimilarity(GraphAttributes):
         # sys.path.append(os.path.abspath('../'))
         # sys.path.append(os.getcwd())
         from dataset_embed.domain_similarity.embed import embed
-        data_feat = []
-        # print('\n ---')
-        # print('len(dataset_list)',len(self.dataset_list))
-        # print(f'reference_model: {reference_model}')
+        data_feat = {}
+
         dataset_list = self.dataset_list.copy()
         for ori_dataset_name, dataset_name in dataset_list.items():
             ds_name = dataset_name.replace(' ','-')
             path = os.path.join(f'../dataset_embed/domain_similarity/feature',reference_model,f'{ds_name}_feature.npy')
-            try:
-                features = np.load(path)
-            except Exception as e:
-                # print('----------')
-                # print(e)
-                features = np.zeros((1,self.FEATURE_DIM))
-            # print()
-            # print(f'feature:{features.shape}')
-            x = features == np.zeros((1,self.FEATURE_DIM))
-            # print(f'x.type: {type(x)}')
-            # if (isinstance(x,bool) and x):
             if not os.path.exists(path):
                 print(f'\nTry to obtain missing features of {dataset_name}')
                 # features = embed('../',dataset_name)
@@ -518,13 +573,20 @@ class GraphAttributesWithDomainSimilarity(GraphAttributes):
                     # print(e)
                     # print(f'== fail to retrieve features and delete row {i}')
                     # self.delete_dataset_row_idx.append(i)
-                    del self.dataset_list[ori_dataset_name]
+                    del self.dataset_list[dataset_name]
                     continue
+            try:
+                features = np.load(path)
+            except Exception as e:
+                # print('\n----------')
+                # print(e)
+                del self.dataset_list[ori_dataset_name]
+                continue
+                features = np.zeros((1,self.FEATURE_DIM))
+            
             features = np.mean(features,axis=0)
-            # print(f"shape of {dataset_name} is {features.shape}")
-            data_feat.append(features)
-        data_feat = np.stack(data_feat)
-        # print(f'== data_feat.shape:{data_feat.shape}')
+            data_feat[ori_dataset_name] = features
+       
         return data_feat
 
 class GraphAttributesWithTask2Vec(GraphAttributes):
@@ -536,25 +598,28 @@ class GraphAttributesWithTask2Vec(GraphAttributes):
         # if args.contain_dataset_feature:
         self.data_features = self.get_dataset_features(args.dataset_reference_model)
 
-        if args.gnn_method == 'node2vec' or (not args.contain_model_feature):
+        if 'node2vec' in args.gnn_method or (not args.contain_model_feature):
             self.model_features = []
             self.model_list = self.unique_model_id['model'].unique()
         else:
             self.model_features, self.model_list = self.get_model_features()
         # get common nodes
         self.drop_nodes()
-        self.reference_model = 'resnet50'
+        # self.reference_model = 'resnet50'
         self.max_dataset_idx = self.unique_dataset_id['mappedID'].max()
+
 
         ##########
         # get specific dataset index
         ##########
         if args.test_dataset != '':
+            print(f'\n --- args.test_dataset: {args.test_dataset}')
+            print(f'\n self.unique_dataset_id: {self.unique_dataset_id}')
             self.test_dataset_idx = self.unique_dataset_id[self.unique_dataset_id['dataset']==args.test_dataset]['mappedID'].values[0]
             ##### !!! make the indeces of the dataset and the model different
             if 'homo' in self.args.gnn_method or 'node2vec' in self.args.gnn_method:
                 self.unique_model_id['mappedID'] += self.max_dataset_idx + 1
-            print(f'unique_model_id: {self.unique_model_id}')
+            # print(f'unique_model_id: {self.unique_model_id}')
             self.model_idx = self.unique_model_id['mappedID'].values
         else:
             self.test_dataset_idx = -1
@@ -563,8 +628,8 @@ class GraphAttributesWithTask2Vec(GraphAttributes):
         self.node_ID = list(self.model_idx) + list(self.unique_dataset_id['mappedID'].values)
 
         # get edge index
-        self.edge_index_accu_model_to_dataset, self.edge_attr_accu_model_to_dataset, self.accu_negative_pairs = self.get_edge_index(method='accuracy',ratio=args.finetune_ratio)#score
-        self.edge_index_tran_model_to_dataset, self.edge_attr_tran_model_to_dataset, self.tran_negative_pairs = self.get_edge_index(method='score',ratio=args.finetune_ratio)#score
+        self.edge_index_accu_model_to_dataset, self.edge_attr_accu_model_to_dataset, self.accu_negative_pairs = self.get_edge_index(method='accuracy') #,ratio=args.finetune_ratio)#score
+        self.edge_index_tran_model_to_dataset, self.edge_attr_tran_model_to_dataset, self.tran_negative_pairs = self.get_edge_index(method='score') #,ratio=args.finetune_ratio)#score
         if 'without_accuracy' in args.gnn_method:
             self.negative_pairs = self.tran_negative_pairs
         else:
@@ -574,43 +639,43 @@ class GraphAttributesWithTask2Vec(GraphAttributes):
         self.edge_index_dataset_to_dataset, self.edge_attr_dataset_to_dataset = self.get_dataset_edge_index(base_dataset=self.base_dataset,threshold=args.distance_thres,sim_method=args.dataset_distance_method)
 
     
-    def get_dataset_features(self,reference_model='resnet50'):
+    def get_dataset_features(self,reference_model='resnet34'):
         from dataset_embed.task2vec_embed.embed_task import embed
-        data_feat = []
+        data_feat = {}
         dataset_list = self.dataset_list.copy()
         for ori_dataset_name, dataset_name in dataset_list.items():
             ds_name = dataset_name.replace(' ','-')
             path = os.path.join(f'../dataset_embed/task2vec_embed/feature',f'{ds_name}_feature.p')
-            try:
-                with open(path, 'rb') as f:
-                    features = pickle.load(f).hessian
-                features = features.reshape((1,features.shape[0]))
-                FEATURE_DIM = features.shape[1]
-            except Exception as e:
-                # print('----------')
-                # print(e)
-                features = np.zeros((1,self.FEATURE_DIM))
-            # print()
-            # print(f'feature:{features.shape}')
-            
-            x = features == np.zeros((1,FEATURE_DIM))
-            # print(f'x.type: {type(x)}')
-            
-            # if (isinstance(x,bool) and x):
             if not os.path.exists(path):
                 print('Try to obtain missing features')
                 # features = embed('../',dataset_name)
                 try:
                     features = embed('../',dataset_name,reference_model)
                 except FileNotFoundError as e:
+                    # print('\n----------')
                     # print(e)
                     # print(f'== fail to retrieve features and delete row {ds_name}')
-                    # self.delete_dataset_row_idx.append(i)
                     del self.dataset_list[ori_dataset_name]
                     continue
+            try:
+                with open(path, 'rb') as f:
+                    features = pickle.load(f).hessian
+                features = features.reshape((1,features.shape[0]))
+                # FEATURE_DIM = features.shape[1]
+            except Exception as e:
+                # print('----------')
+                # print(e)
+                del self.dataset_list[ori_dataset_name]
+                continue
+                features = np.zeros((1,self.FEATURE_DIM))
+            # print(f'\n----success {ori_dataset_name}')
+            
+            # x = features == np.zeros((1,FEATURE_DIM))
+            
             features = np.mean(features,axis=0)
-            # print(f"shape of {dataset_name} is {features.shape}")
-            data_feat.append(features)
-        data_feat = np.stack(data_feat)
+            # print(f"\n====\nTask2Vec feature shape of {dataset_name} is {features.shape}")
+            # data_feat.append(features)
+            data_feat[ori_dataset_name] = features
+        # data_feat = np.stack(data_feat)
         # print(f'== data_feat.shape:{data_feat.shape}')
         return data_feat

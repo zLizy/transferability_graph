@@ -23,8 +23,35 @@ python3 compute.py --dataset_name ${DATASET_NAME} --method=${METHOD}
 ### Obtain model and dataset features by graph learning   
 *  Run **TransferGraph** to map model-dataset relationships in a graph and use GNN to train node representations.
 ```console
+cd ..
 cd graph
+python3 run.py                                                                
+```
+### Predict the model performance 
+Learn a simple regression model, e.g., XGBoost, to predict model performance using the features along with other metadata.
+```console
+cd methods
+python3 train_with_linear_regression.py
+```
+### Evaluation
+We use **Pearson correlation** as evaluation metric. We compare the predicted model performance with the actual fine-tuning results.
+
+## Batch experiments
+We vary the configurations for experiments. To run experiments, use `run_graph.sh`.
+```python
 ./run_graph.sh
 ```
-### Learn a simple machine learning model, e.g., linear regression, to predict model performance using the features along with other metadata.
+**Confugurations**
+contain_dataset_feature - whether include dataset features as node features
+gnn_method - GNN algorithms to learn from a graph
+test_dataset - the dataset that models fine-tuned on
+top_neg_K - the percentage of the models with the lowest transerability score
+top_pos_K - the percentage of the models with the highest transerability score
+accu_neg_thres - the percentage of the least performing models regarded as negative edges in a graph
+accu_pos_thres - the percentage of the highest performing models regarded as negative edges in a graph
+hidden_channels - dimension of the latent representations (e.g., 128)
+finetune_ratio - the amount of fine-tuning history used to train the GNN
+dataset_embed_method - method to extract latent representation of datasets
+
+
 
